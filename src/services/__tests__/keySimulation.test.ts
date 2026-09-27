@@ -111,6 +111,20 @@ describe('simulateKeyAction Backspace/Delete', () => {
       expect(simulateKeyAction(el, 'Delete')).toBe('Delete: cursor at end, nothing to delete');
     }
   });
+
+  it('leaves non-text inputs alone, so the agent never reads back a value the field does not hold', () => {
+    for (const [type, value] of [
+      ['date', '2026-09-27'],
+      ['checkbox', 'on'],
+      ['color', '#aabbcc'],
+    ] as const) {
+      document.body.innerHTML = `<input type="${type}" value="${value}">`;
+      const el = $('input');
+      expect(simulateKeyAction(el, 'Backspace')).toBe('Backspace: dispatched event');
+      expect(simulateKeyAction(el, 'Delete')).toBe('Delete: dispatched event');
+      expect(el.value).toBe(value);
+    }
+  });
 });
 
 describe('simulateKeyAction ArrowDown/ArrowUp on a select', () => {
@@ -142,7 +156,7 @@ describe('simulateKeyAction Enter', () => {
 
   it('inserts a line break in a textarea instead of submitting its form', () => {
     const submits = inForm('<textarea></textarea>');
-    const el = document.querySelector('textarea')!;
+    const el = $('textarea');
     el.value = 'ab';
     el.setSelectionRange(1, 1);
     expect(simulateKeyAction(el, 'Enter')).toBe('Enter: inserted a line break');
@@ -152,7 +166,7 @@ describe('simulateKeyAction Enter', () => {
 
   it('submits the form of an input', () => {
     const submits = inForm('<input />');
-    expect(simulateKeyAction(document.querySelector('input')!, 'Enter')).toBe('Enter: clicked form submit button');
+    expect(simulateKeyAction($('input'), 'Enter')).toBe('Enter: clicked form submit button');
     expect(submits).toEqual(['submit']);
   });
 });
@@ -160,7 +174,7 @@ describe('simulateKeyAction Enter', () => {
 describe('simulateKeyAction ArrowLeft/ArrowRight and PageUp/PageDown', () => {
   it('moves the caret within a text field, clamped to its value', () => {
     document.body.innerHTML = '<input />';
-    const el = document.querySelector('input')!;
+    const el = $('input');
     el.value = 'ab';
     el.setSelectionRange(1, 1);
     expect(simulateKeyAction(el, 'ArrowLeft')).toBe('ArrowLeft: moved cursor to 0');

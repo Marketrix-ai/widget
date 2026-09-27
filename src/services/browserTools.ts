@@ -10,7 +10,7 @@ import type { WidgetEvent, WidgetToolResult } from '../sdk';
 import { toolExplanation, waitsForUser } from '../utils/chat';
 import { errorMessage } from '../utils/errors';
 import { domService } from './DomService';
-import { isTextField, setFieldValue, simulateKeyAction } from './keySimulation';
+import { isValueField, setFieldValue, simulateKeyAction } from './keySimulation';
 import { activeScreenStream } from './ScreenShareService';
 import { ShowModeCancelled, showModeService } from './ShowModeService';
 
@@ -52,17 +52,16 @@ const SEARCH_URLS: Record<ToolArgs<'search'>['engine'], string> = {
   bing: 'https://www.bing.com/search?q=',
 };
 
-function elementAt(index: number): HTMLElement {
-  const validated = domService.getValidatedElement(index);
-  if (!validated.element) throw new Error(validated.error);
-  return validated.element;
-}
-
 function selectAt(index: number): HTMLSelectElement {
-  const found = elementAt(index);
+  const found = domService.getValidatedElement(index);
   if (!(found instanceof HTMLSelectElement)) throw new Error(`Element ${index} is not a select element`);
   return found;
 }
+
+const goTo = (text: string, url: string) =>
+  deferred(text, () => {
+    window.location.href = url;
+  });
 
 function navigate(args: ToolArgs<'navigate'>): ToolExecutionResult {
   const url = httpUrl(args.url);
@@ -71,21 +70,16 @@ function navigate(args: ToolArgs<'navigate'>): ToolExecutionResult {
   if (args.new_tab) {
     return window.open(url, '_blank') ? ok(`Opened ${url} in new tab`) : fail('The browser blocked opening a new tab');
   }
-  return deferred(`Navigating to ${url}`, () => {
-    window.location.href = url;
-  });
+  return goTo(`Navigating to ${url}`, url);
 }
 
 function search({ query, engine }: ToolArgs<'search'>): ToolExecutionResult {
   if (!query) return fail('Query is required');
-  const url = SEARCH_URLS[engine] + encodeURIComponent(query);
-  return deferred(`Searching for "${query}" on ${engine}`, () => {
-    window.location.href = url;
-  });
+  return goTo(`Searching for "${query}" on ${engine}`, SEARCH_URLS[engine] + encodeURIComponent(query));
 }
 
 async function clickElement(args: ToolArgs<'click_element'>): Promise<ToolExecutionResult> {
-  const element = elementAt(args.index);
+  const element = domService.getValidatedElement(args.index);
 
   element.scrollIntoView({ behavior: 'smooth', block: 'center' });
   await new Promise(resolve => setTimeout(resolve, 100));
@@ -94,9 +88,9 @@ async function clickElement(args: ToolArgs<'click_element'>): Promise<ToolExecut
 }
 
 function typeText({ index, text, clear }: ToolArgs<'type_text'>): ToolExecutionResult {
-  const element = elementAt(index);
+  const element = domService.getValidatedElement(index);
 
-  if (isTextField(element)) {
+  if (isValueField(element)) {
     element.focus();
     setFieldValue(element, clear ? text : element.value + text);
     element.dispatchEvent(new Event('blur', { bubbles: true }));
@@ -183,7 +177,7 @@ function getDropdownOptions({ index }: ToolArgs<'get_dropdown_options'>) {
 }
 
 function sendKeys({ index, keys }: ToolArgs<'send_keys'>): ToolExecutionResult {
-  const element = elementAt(index);
+  const element = domService.getValidatedElement(index);
   element.focus();
   element.dispatchEvent(new KeyboardEvent('keydown', { key: keys, bubbles: true, cancelable: true }));
   element.dispatchEvent(new KeyboardEvent('keyup', { key: keys, bubbles: true, cancelable: true }));
@@ -264,7 +258,7 @@ export async function executeTool<K extends WidgetToolName>(
   try {
     if (mode === 'show' && waitsForUser(browserToolName) && 'index' in args) {
       await showModeService.showToolAction({
-        element: elementAt(args.index),
+        element: domService.getValidatedElement(args.index),
         index: args.index,
         explanation: toolExplanation(browserToolName, explanation),
         browserToolName,

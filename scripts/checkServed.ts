@@ -37,17 +37,13 @@ function headerValue(block: string, header: string): string {
   return match[1].trim().replace(/^"(.*)"$/, '$1');
 }
 
-const widgetBlock = extractBlock('location = /widget.mjs {');
-const rootBlock = extractBlock('location / {');
+const headersOf = (block: string) => ({
+  cacheControl: headerValue(block, 'Cache-Control'),
+  cors: headerValue(block, 'Access-Control-Allow-Origin'),
+});
 const expectedHeaders = {
-  widget: {
-    cacheControl: headerValue(widgetBlock, 'Cache-Control'),
-    cors: headerValue(widgetBlock, 'Access-Control-Allow-Origin'),
-  },
-  root: {
-    cacheControl: headerValue(rootBlock, 'Cache-Control'),
-    cors: headerValue(rootBlock, 'Access-Control-Allow-Origin'),
-  },
+  widget: headersOf(extractBlock('location = /widget.mjs {')),
+  root: headersOf(extractBlock('location / {')),
 };
 
 const targetUrl = process.env['TARGET_URL'];
@@ -84,7 +80,6 @@ try {
   if (!base) ({ base, container } = await bootLocal());
   let rows = 0;
   const mismatches: string[] = [];
-  const needsInfra: string[] = [];
 
   const check = async (label: string, run: () => Promise<void>) => {
     rows += 1;
@@ -117,22 +112,20 @@ try {
     assertBytesEqual(new Uint8Array(await r.arrayBuffer()), plain, 'identity body');
   });
 
-  await check('/widget.mjs brotli negotiated', async () => {
-    const r = await fetch(`${base}/widget.mjs`, { headers: { 'Accept-Encoding': 'br' } });
-    assert.equal(r.status, 200);
-    assert.equal(r.headers.get('content-encoding'), 'br');
-    assert.equal(r.headers.get('vary'), 'Accept-Encoding');
-    assert.equal(r.headers.get('content-length'), String((await fileBytes('dist/widget.mjs.br')).length));
-    assertBytesEqual(new Uint8Array(await r.arrayBuffer()), await fileBytes('dist/widget.mjs'), 'decoded brotli body');
-  });
-
-  await check('/widget.mjs gzip negotiated (no brotli offered)', async () => {
-    const r = await fetch(`${base}/widget.mjs`, { headers: { 'Accept-Encoding': 'gzip' } });
-    assert.equal(r.status, 200);
-    assert.equal(r.headers.get('content-encoding'), 'gzip', 'gzip_static must cover the non-brotli case');
-    assert.equal(r.headers.get('content-length'), String((await fileBytes('dist/widget.mjs.gz')).length));
-    assertBytesEqual(new Uint8Array(await r.arrayBuffer()), await fileBytes('dist/widget.mjs'), 'decoded gzip body');
-  });
+  for (const [encoding, ext] of Object.entries({ br: 'br', gzip: 'gz' })) {
+    await check(`/widget.mjs ${encoding} negotiated`, async () => {
+      const r = await fetch(`${base}/widget.mjs`, { headers: { 'Accept-Encoding': encoding } });
+      assert.equal(r.status, 200);
+      assert.equal(r.headers.get('content-encoding'), encoding);
+      assert.equal(r.headers.get('vary'), 'Accept-Encoding');
+      assert.equal(r.headers.get('content-length'), String((await fileBytes(`dist/widget.mjs.${ext}`)).length));
+      assertBytesEqual(
+        new Uint8Array(await r.arrayBuffer()),
+        await fileBytes('dist/widget.mjs'),
+        `decoded ${encoding} body`,
+      );
+    });
+  }
 
   await check('/loader.js', async () => {
     const r = await fetch(`${base}/loader.js`);
@@ -173,15 +166,14 @@ try {
         rmSync(scratch, { recursive: true, force: true });
       }
     });
-  } else if (targetUrl) {
-    needsInfra.push(
-      `byte-identity against the deployed tag: set EXPECTED_TAG (read from infra's Helm values or the deploy.yml dispatch inputs for ${base}) to run it`,
-    );
   }
 
-  const summary = `check:served — ${rows} rows, ${mismatches.length} mismatches${targetUrl ? ` (${targetUrl})` : ''}`;
-  console.log(summary);
-  for (const item of needsInfra) console.log(`needs-infra: ${item}`);
+  console.log(`check:served — ${rows} rows, ${mismatches.length} mismatches${targetUrl ? ` (${targetUrl})` : ''}`);
+  if (targetUrl && !expectedTag) {
+    console.log(
+      `needs-infra: byte-identity against the deployed tag: set EXPECTED_TAG (read from infra's Helm values or the deploy.yml dispatch inputs for ${base}) to run it`,
+    );
+  }
   if (mismatches.length > 0) {
     for (const mismatch of mismatches) console.error(`- ${mismatch}`);
     process.exitCode = 1;

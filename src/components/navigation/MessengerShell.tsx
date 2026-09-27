@@ -36,12 +36,9 @@ function activeElementIn(container: HTMLElement): HTMLElement | null {
 function useFocusTrap(
   containerRef: React.RefObject<HTMLElement | null>,
   isActive: boolean,
-  options: {
-    onEscape: () => void;
-    focusTargetRef?: React.RefObject<HTMLElement | null> | undefined;
-  },
+  onEscape: () => void,
+  focusTargetRef: React.RefObject<HTMLElement | null> | undefined,
 ) {
-  const { onEscape, focusTargetRef } = options;
   const previouslyFocusedRef = useRef<HTMLElement | null | undefined>(undefined);
 
   useEffect(() => {
@@ -110,7 +107,7 @@ const STORAGE_KEY_NAME = 'marketrix_widget_size';
 
 function useResize() {
   const config = useWidgetConfig();
-  const { isPreviewMode, widget_position: position } = config;
+  const position = config.widget_position;
   const storageKey = scopedKey(STORAGE_KEY_NAME, config);
   const containerRef = useRef<HTMLDivElement>(null);
   const grip = useMemo(() => getResizeGrip(position), [position]);
@@ -139,11 +136,12 @@ function useResize() {
     [storageKey],
   );
 
-  const handleResizeStart = useCallback(
+  const onResizeStart = useCallback(
     (e: React.PointerEvent<HTMLElement>) => {
       e.preventDefault();
       e.stopPropagation();
-      if (isPreviewMode) return;
+      const panel = containerRef.current;
+      if (!panel) return;
 
       const handle = e.currentTarget;
       const { pointerId } = e;
@@ -154,9 +152,7 @@ function useResize() {
       const startH = dimsRef.current.height;
       const { growX, growY, cursor } = grip;
 
-      if (containerRef.current) {
-        containerRef.current.dataset['resizing'] = 'true';
-      }
+      panel.dataset['resizing'] = 'true';
 
       const onMove = (moveEvent: PointerEvent) => {
         const next = clampSize({
@@ -165,10 +161,8 @@ function useResize() {
         });
         dimsRef.current = next;
 
-        if (containerRef.current) {
-          containerRef.current.style.width = `${next.width}px`;
-          containerRef.current.style.height = `${next.height}px`;
-        }
+        panel.style.width = `${next.width}px`;
+        panel.style.height = `${next.height}px`;
       };
 
       const onUp = () => {
@@ -179,11 +173,7 @@ function useResize() {
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
         endDragRef.current = null;
-
-        if (containerRef.current) {
-          delete containerRef.current.dataset['resizing'];
-        }
-
+        delete panel.dataset['resizing'];
         commitSize({ ...dimsRef.current });
       };
 
@@ -195,12 +185,11 @@ function useResize() {
       handle.addEventListener('pointercancel', onUp);
       endDragRef.current = onUp;
     },
-    [isPreviewMode, commitSize, grip],
+    [commitSize, grip],
   );
 
-  const handleResizeKeyDown = useCallback(
+  const onResizeKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (isPreviewMode) return;
       const deltas: Record<string, Size> = {
         ArrowLeft: { width: -KEYBOARD_RESIZE_STEP_PX * grip.growX, height: 0 },
         ArrowRight: { width: KEYBOARD_RESIZE_STEP_PX * grip.growX, height: 0 },
@@ -214,16 +203,10 @@ function useResize() {
         clampSize({ width: dimsRef.current.width + delta.width, height: dimsRef.current.height + delta.height }),
       );
     },
-    [isPreviewMode, commitSize, grip],
+    [commitSize, grip],
   );
 
-  return {
-    dimensions,
-    grip,
-    onResizeStart: handleResizeStart,
-    onResizeKeyDown: handleResizeKeyDown,
-    containerRef,
-  };
+  return { dimensions, grip, onResizeStart, onResizeKeyDown, containerRef };
 }
 
 export const MessengerShell: React.FC = () => {
@@ -239,10 +222,7 @@ export const MessengerShell: React.FC = () => {
 
   const closePanel = useCallback(() => actions.applyState({ isOpen: false }), [actions]);
 
-  useFocusTrap(containerRef, isOpen, {
-    onEscape: closePanel,
-    focusTargetRef: activeView === 'chat' ? messageInputRef : undefined,
-  });
+  useFocusTrap(containerRef, isOpen, closePanel, activeView === 'chat' ? messageInputRef : undefined);
 
   const panelPositionStyle = getPanelPositionStyle(config.widget_position);
 

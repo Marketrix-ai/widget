@@ -3,15 +3,21 @@
  * `simulateKeyAction` carries out what the browser withholds from a programmatic, untrusted `KeyboardEvent`
  * (focus moves, form submits, text edits); `setFieldValue` writes through the native `value` setter and fires
  * `input`/`change` so framework-controlled inputs see the change. Email and number inputs expose no caret, so
- * an edit there lands at the end of the value, where a user who just typed would have it.
+ * an edit there lands at the end of the value, where a user who just typed would have it; Backspace and Delete
+ * edit only text-like fields, because a date, checkbox or color value is not a string a keypress shortens.
  */
 import { focusablesIn } from '../utils/dom';
 import type { ToolArgs } from './browserTools';
 
 type SendKey = ToolArgs<'send_keys'>['keys'];
 
-export const isTextField = (el: Element): el is HTMLInputElement | HTMLTextAreaElement =>
+const TEXT_INPUT_TYPES = new Set(['text', 'search', 'email', 'url', 'tel', 'password', 'number']);
+
+export const isValueField = (el: Element): el is HTMLInputElement | HTMLTextAreaElement =>
   el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement;
+
+const isTextField = (el: Element): el is HTMLInputElement | HTMLTextAreaElement =>
+  el instanceof HTMLTextAreaElement || (el instanceof HTMLInputElement && TEXT_INPUT_TYPES.has(el.type));
 
 const hasCaret = (el: Element): el is (HTMLInputElement | HTMLTextAreaElement) & { selectionStart: number } =>
   isTextField(el) && el.selectionStart !== null;
@@ -147,7 +153,7 @@ function deleteAt(element: HTMLInputElement | HTMLTextAreaElement, direction: 'B
 
   setFieldValue(element, newValue);
   if (hasCaret(element)) element.setSelectionRange(newCursorPos, newCursorPos);
-  return `${direction}: deleted character, value is now "${newValue}"`;
+  return `${direction}: deleted character, value is now "${element.value}"`;
 }
 
 export function setFieldValue(el: HTMLInputElement | HTMLTextAreaElement, value: string): void {

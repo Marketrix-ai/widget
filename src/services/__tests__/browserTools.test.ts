@@ -173,9 +173,7 @@ describe('a Do tool call against a missing index fails typed, never throws', () 
 
   it('selecting a dropdown on a non-select element is rejected as typed, not thrown', async () => {
     document.body.innerHTML = '<input style="position: fixed" />';
-    vi.spyOn(domService, 'getValidatedElement').mockReturnValue({
-      element: $('input'),
-    });
+    vi.spyOn(domService, 'getValidatedElement').mockReturnValue($('input'));
 
     const result = await executeTool('select_dropdown_option', { index: 0, option: 'x' }, 'do');
 
@@ -189,7 +187,7 @@ describe('typeText writes through the same native setter for input and textarea'
     async tag => {
       document.body.innerHTML = `<${tag} style="position: fixed"></${tag}>`;
       const element = $(tag);
-      vi.spyOn(domService, 'getValidatedElement').mockReturnValue({ element });
+      vi.spyOn(domService, 'getValidatedElement').mockReturnValue(element);
       const seen: string[] = [];
       for (const type of ['input', 'change', 'blur']) element.addEventListener(type, e => seen.push(e.type));
 
@@ -234,9 +232,8 @@ describe("show mode's real visitor click reaches the element's handler exactly o
 
 describe('a missing element surfaces the reason domService gave', () => {
   it('uses the specific reason instead of the generic not-found message', async () => {
-    vi.spyOn(domService, 'getValidatedElement').mockReturnValue({
-      element: null,
-      error: 'Element 0 is not currently visible',
+    vi.spyOn(domService, 'getValidatedElement').mockImplementation(() => {
+      throw new Error('Element 0 is not currently visible');
     });
 
     const result = await executeTool('click_element', { index: 0 }, 'do');
@@ -297,7 +294,7 @@ describe('typeText branches beyond input/textarea', () => {
   it('appends instead of replacing when clear is false', async () => {
     document.body.innerHTML = '<input style="position: fixed" value="existing-" />';
     const element = $('input');
-    vi.spyOn(domService, 'getValidatedElement').mockReturnValue({ element });
+    vi.spyOn(domService, 'getValidatedElement').mockReturnValue(element);
 
     const result = await executeTool('type_text', { index: 0, text: 'more', clear: false }, 'do');
 
@@ -309,7 +306,7 @@ describe('typeText branches beyond input/textarea', () => {
     document.body.innerHTML = '<div style="position: fixed"></div>';
     const element = $('div');
     Object.defineProperty(element, 'isContentEditable', { value: true });
-    vi.spyOn(domService, 'getValidatedElement').mockReturnValue({ element });
+    vi.spyOn(domService, 'getValidatedElement').mockReturnValue(element);
     const execCommand = vi.fn().mockReturnValue(true);
     (document as unknown as { execCommand: typeof execCommand }).execCommand = execCommand;
 
@@ -322,7 +319,7 @@ describe('typeText branches beyond input/textarea', () => {
   it('sets .value directly on a non-text-field element that exposes one, like a select', async () => {
     document.body.innerHTML = '<select style="position: fixed"><option value="x">x</option></select>';
     const element = $('select');
-    vi.spyOn(domService, 'getValidatedElement').mockReturnValue({ element });
+    vi.spyOn(domService, 'getValidatedElement').mockReturnValue(element);
 
     const result = await executeTool('type_text', { index: 0, text: 'x', clear: true }, 'do');
 
@@ -394,9 +391,7 @@ describe('selectDropdownOption matches by value OR by visible text', () => {
   beforeEach(() => {
     document.body.innerHTML =
       '<select style="position: fixed"><option value="v1">Text One</option><option value="v2">Text Two</option></select>';
-    vi.spyOn(domService, 'getValidatedElement').mockReturnValue({
-      element: $('select'),
-    });
+    vi.spyOn(domService, 'getValidatedElement').mockReturnValue($('select'));
   });
 
   it.each([
@@ -415,7 +410,7 @@ describe('sendKeys reports the effect the key had', () => {
     const element = $('input');
     element.focus();
     element.setSelectionRange(0, 0);
-    vi.spyOn(domService, 'getValidatedElement').mockReturnValue({ element });
+    vi.spyOn(domService, 'getValidatedElement').mockReturnValue(element);
 
     const result = await executeTool('send_keys', { index: 0, keys: 'End' }, 'do');
 
@@ -426,7 +421,7 @@ describe('sendKeys reports the effect the key had', () => {
   it('scrolls the page for PageDown rather than reporting success without an effect', async () => {
     document.body.innerHTML = '<div tabindex="0" style="position: fixed"></div>';
     const element = $('div');
-    vi.spyOn(domService, 'getValidatedElement').mockReturnValue({ element });
+    vi.spyOn(domService, 'getValidatedElement').mockReturnValue(element);
     const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {});
 
     const result = await executeTool('send_keys', { index: 0, keys: 'PageDown' }, 'do');

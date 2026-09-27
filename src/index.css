@@ -109,7 +109,7 @@
 .mtx-icon-button:focus-visible {
   outline: none;
   box-shadow:
-    0 0 0 2px var(--ring-offset),
+    0 0 0 2px var(--card),
     0 0 0 4px var(--ring);
 }
 
@@ -222,7 +222,7 @@
 }
 
 .mtx-icon-button[data-variant='primary']:hover {
-  background: var(--primary-hover);
+  background: color-mix(in srgb, var(--primary) 85%, transparent);
 }
 
 .mtx-icon-button[data-variant='secondary'] {
@@ -231,7 +231,7 @@
 }
 
 .mtx-icon-button[data-variant='secondary']:hover {
-  background: var(--secondary-hover);
+  background: color-mix(in srgb, var(--secondary) 30%, transparent);
 }
 
 .mtx-icon-button[data-variant='ghost'] {
@@ -244,8 +244,8 @@
   opacity: 1;
 }
 
-.mtx-button[data-disabled='true'],
-.mtx-icon-button[data-disabled='true'] {
+.mtx-button:disabled,
+.mtx-icon-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   pointer-events: none;

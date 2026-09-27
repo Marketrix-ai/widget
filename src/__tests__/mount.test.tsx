@@ -61,6 +61,15 @@ const resetDocument = () => {
 };
 
 let mountImportCount = 0;
+const spyShadowRoots = () => {
+  const attach = vi.spyOn(HTMLElement.prototype, 'attachShadow');
+  return (n: number): ShadowRoot => {
+    const root = attach.mock.results[n]?.value;
+    if (!(root instanceof ShadowRoot)) throw new Error(`attachShadow call ${n} returned no shadow root`);
+    return root;
+  };
+};
+
 const importMount = () => import(`../mount.tsx?t=${mountImportCount++}`);
 
 const runAutoInit = async () => {
@@ -162,11 +171,11 @@ describe('widget public entry paths', () => {
 
   it('owns non-empty widget CSS inside the closed shadow root', async () => {
     const { renderWidget } = await importMount();
-    const attach = vi.spyOn(HTMLElement.prototype, 'attachShadow');
+    const shadowAt = spyShadowRoots();
 
     renderWidget(getMockWidgetConfig());
 
-    const styles = (attach.mock.results[0]?.value as ShadowRoot).querySelectorAll('style');
+    const styles = shadowAt(0).querySelectorAll('style');
     expect(styles).toHaveLength(1);
     expect(styles[0]?.textContent?.trim()).toBeTruthy();
     expect(document.head.querySelector('style')).toBeNull();
@@ -174,14 +183,12 @@ describe('widget public entry paths', () => {
 
   it('leaves the injected style element without a nonce by default, and applies one when given', async () => {
     const { renderWidget } = await importMount();
-    const attach = vi.spyOn(HTMLElement.prototype, 'attachShadow');
+    const shadowAt = spyShadowRoots();
 
     renderWidget(getMockWidgetConfig());
     renderWidget(getMockWidgetConfig({ styleNonce: 'csp-nonce-123' }));
 
-    const [bare, nonced] = attach.mock.results.map(
-      result => (result.value as ShadowRoot).querySelector('style')?.nonce,
-    );
+    const [bare, nonced] = [0, 1].map(n => shadowAt(n).querySelector('style')?.nonce);
     expect(bare).toBe('');
     expect(nonced).toBe('csp-nonce-123');
   });
@@ -190,10 +197,10 @@ describe('widget public entry paths', () => {
     const css = readFileSync(resolve(process.cwd(), 'src/index.css'), 'utf8');
     const declared = new Set([...css.matchAll(/(--[\w-]+):[^;!]*;/g)].map(match => match[1]));
     appendModuleScript({ 'mtx-id': 'widget-id', 'mtx-key': 'widget-key' });
-    const attach = vi.spyOn(HTMLElement.prototype, 'attachShadow');
+    const shadowAt = spyShadowRoots();
     await runAutoInit();
 
-    const notice = (attach.mock.results[0]?.value as ShadowRoot).querySelector('#marketrix-widget-notice-root');
+    const notice = shadowAt(0).querySelector('#marketrix-widget-notice-root');
     const read = [...new Set([...css.matchAll(/var\((--[\w-]+)/g)].map(match => match[1] ?? ''))];
     const missing = read.filter(name => !declared.has(name) && !notice?.getAttribute('style')?.includes(`${name}:`));
     expect(missing).toEqual([]);
@@ -204,9 +211,9 @@ describe('widget public entry paths', () => {
     ['missing-host', {}],
   ])('applies the style nonce to the %s host-page notice', async (_case, attributes) => {
     appendModuleScript({ 'mtx-id': 'widget-id', 'mtx-key': 'widget-key', 'mtx-style-nonce': 'csp-n', ...attributes });
-    const attach = vi.spyOn(HTMLElement.prototype, 'attachShadow');
+    const shadowAt = spyShadowRoots();
     await runAutoInit();
 
-    expect((attach.mock.results[0]?.value as ShadowRoot).querySelector('style')?.nonce).toBe('csp-n');
+    expect(shadowAt(0).querySelector('style')?.nonce).toBe('csp-n');
   });
 });

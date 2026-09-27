@@ -1,5 +1,6 @@
 /**
- * `Button` tests: no axe-core violations, variant/size data attributes. The click handler is passed
+ * `Button` tests: no axe-core violations, variant/size data attributes, and a disabled button carries the
+ * native `disabled` state the stylesheet's `:disabled` rule reads. The click handler is passed
  * straight through to Base UI's native button with no logic of Button's own, so it is not retested here.
  */
 import { render, screen } from '@testing-library/react';
@@ -24,5 +25,11 @@ describe('Button', () => {
     const button = screen.getByRole('button', { name: 'Save' });
     expect(button).toHaveAttribute('data-size', 'md');
     expect(button).toHaveAttribute('data-variant', 'secondary');
+  });
+
+  it('is natively disabled, so the :disabled rule styles it', () => {
+    render(<Button disabled>Send</Button>);
+
+    expect(screen.getByRole('button', { name: 'Send' }).matches(':disabled')).toBe(true);
   });
 });

@@ -19,7 +19,7 @@ describe('package.json', () => {
   const pkg = JSON.parse(read('package.json'));
 
   it('publishes exactly the dist allowlist, with no .npmignore to complicate it', () => {
-    expect(pkg.files).toEqual(['dist', '!dist/**/*.map']);
+    expect(pkg.files).toEqual(['dist', '!dist/**/*.map', '!dist/module-sizes.json']);
     expect(() => read('.npmignore')).toThrow();
   });
 

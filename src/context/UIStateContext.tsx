@@ -4,9 +4,9 @@
  * stable, and `applyState` merges any partial view state. The published mode is always one the
  * tenant enabled, whatever was stored or picked before the settings changed.
  */
-import React, { createContext, useContext, useMemo, useState } from 'react';
+import React, { createContext, useMemo, useState } from 'react';
 
-import { useWidgetConfig } from '../hooks/useWidget';
+import { useRequiredContext, useWidgetConfig } from '../hooks/useWidget';
 import type { WidgetState } from '../types';
 import { effectiveMode } from '../utils/chat';
 
@@ -54,8 +54,4 @@ export const UIStateProvider: React.FC<{ children: React.ReactNode }> = ({ child
   return <UIStateContext.Provider value={contextValue}>{children}</UIStateContext.Provider>;
 };
 
-export const useUIStateContext = (): UIStateContextType => {
-  const ctx = useContext(UIStateContext);
-  if (!ctx) throw new Error('useUIStateContext must be used within UIStateProvider');
-  return ctx;
-};
+export const useUIStateContext = () => useRequiredContext(UIStateContext, 'UIStateProvider');

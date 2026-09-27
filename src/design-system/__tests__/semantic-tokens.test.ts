@@ -25,14 +25,12 @@ describe('themeCssProperties', () => {
     expect(themeCssProperties(stale)).toEqual(themeCssProperties(getMockWidgetConfig()));
   });
 
-  it('pins the exact opacity of every derived muted/faint/hover variant', () => {
+  it('pins the exact opacity of every derived muted/faint variant', () => {
     const css = themeCssProperties(getMockWidgetConfig());
 
     expect(css['--foreground-muted']).toBe('rgba(249, 250, 251, 0.6)');
     expect(css['--foreground-faint']).toBe('rgba(249, 250, 251, 0.4)');
-    expect(css['--primary-hover']).toBe('rgba(59, 130, 246, 0.85)');
     expect(css['--secondary-bg']).toBe('rgba(107, 114, 128, 0.2)');
-    expect(css['--secondary-hover']).toBe('rgba(107, 114, 128, 0.3)');
   });
 
   it('emits the fixed radius and durations', () => {
@@ -46,7 +44,7 @@ describe('themeCssProperties', () => {
   it('derives the focus ring from the background regardless of the tenant accent, for both readings', () => {
     for (const widget_background_color of ['#ffffff', '#111827', '#f5f5f4', '#0a0a0a', '#fef3c7', '#1e293b']) {
       const css = themeCssProperties(getMockWidgetConfig({ widget_background_color, widget_accent_color: '#a855f7' }));
-      expect(css['--ring-offset']).toBe(widget_background_color);
+      expect(css['--card']).toBe(widget_background_color);
       expect(css['--ring']).toBe(getContrastingColor(widget_background_color));
     }
   });

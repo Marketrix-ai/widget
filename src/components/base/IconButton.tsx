@@ -21,7 +21,6 @@ export function IconButton({
   size = 'sm',
   tone,
   label,
-  disabled,
   children,
   style,
   ref,
@@ -32,10 +31,8 @@ export function IconButton({
       {...props}
       ref={ref}
       type='button'
-      disabled={disabled}
       aria-label={label}
       className='mtx-icon-button'
-      data-disabled={disabled ? 'true' : 'false'}
       data-size={size}
       data-variant={variant}
       style={tone ? { color: TEXT_TONE[tone], ...style } : style}

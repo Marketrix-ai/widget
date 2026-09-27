@@ -1,13 +1,12 @@
 /**
  * The one way a test mounts the whole widget: `renderWidget(overrides, {previewMode})` renders
  * `WidgetRoot` on `getMockWidgetConfig(overrides)` under `WidgetProviders` and returns the Testing
- * Library result; `openWidget` clicks the launcher and `openChatTab` moves to the Chat view, the two
- * steps every panel test opens with; `dragFabAndResize` pointer-drags the launcher, then the resize grip.
+ * Library result; `openWidget` clicks the launcher and `openChatTab` moves to the Chat view, the two steps
+ * every panel test opens with; `getComposer` finds the chat input; `dragFabAndResize` pointer-drags the
+ * launcher, then the resize grip.
  * `ChatHarness` mounts just the chat store under a mock config, and `renderChatHarness` mounts it and
  * returns a getter for the live chat context.
- *
- * `previewMode` defaults true, since a mounted widget otherwise mints a chat id and dials the stream; a test
- * of the launcher's pixel anchoring passes false, since preview mode is the branch that skips it.
+ * `previewMode` defaults true, so a mounted widget neither mints a chat id nor dials the stream.
  */
 import { fireEvent, render, screen } from '@testing-library/react';
 import type React from 'react';
@@ -31,6 +30,8 @@ export function renderWidget(
     </WidgetProviders>,
   );
 }
+
+export const getComposer = () => $('textarea');
 
 export const openWidget = (): void => {
   fireEvent.click(screen.getByRole('button', { name: /open/i }));

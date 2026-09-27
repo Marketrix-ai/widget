@@ -74,15 +74,13 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
       elevation='button'
       style={{ marginBottom: '4px', borderRadius: OVERLAY_BORDER_RADIUS, backgroundColor: '#000000' }}
     >
-      {phase === 'loading' && (
-        <Overlay label='Loading stream...'>
-          <Spinner size='lg' style={{ color: VIDEO_WHITE }} />
-        </Overlay>
-      )}
-
-      {phase === 'failed' && (
-        <Overlay label='Failed to load stream'>
-          <Icon name='alertCircle' size={32} style={{ color: '#9ca3af' }} />
+      {phase !== 'live' && (
+        <Overlay label={phase === 'loading' ? 'Loading stream...' : 'Failed to load stream'}>
+          {phase === 'loading' ? (
+            <Spinner size='lg' style={{ color: VIDEO_WHITE }} />
+          ) : (
+            <Icon name='alertCircle' size={32} style={{ color: '#9ca3af' }} />
+          )}
         </Overlay>
       )}
 

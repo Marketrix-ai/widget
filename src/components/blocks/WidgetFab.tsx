@@ -28,12 +28,9 @@ const DRAG_THRESHOLD_PX = 5;
 const VELOCITY_SAMPLE_INTERVAL_MS = 10;
 const VELOCITY_HISTORY_SIZE = 6;
 
-function useDragSnap(
-  position: WidgetPosition,
-  onPositionCommit: (position: WidgetPosition) => void,
-  isPreviewMode: boolean,
-  wrapperRef: React.RefObject<HTMLDivElement | null>,
-) {
+function useDragSnap(onPositionCommit: (position: WidgetPosition) => void) {
+  const { isPreviewMode, widget_position: position } = useWidgetConfig();
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const abandonSnapRef = useRef<(() => void) | null>(null);
   const dragRef = useRef<{
@@ -77,7 +74,7 @@ function useDragSnap(
     setWrapperSize(prev =>
       prev.w === rect.width && prev.h === rect.height ? prev : { w: rect.width, h: rect.height },
     );
-  }, [wrapperRef]);
+  }, []);
 
   useLayoutEffect(() => {
     measureWrapper();
@@ -85,7 +82,7 @@ function useDragSnap(
     const ro = new ResizeObserver(measureWrapper);
     ro.observe(wrapperRef.current);
     return () => ro.disconnect();
-  }, [measureWrapper, position, wrapperRef]);
+  }, [measureWrapper, position]);
 
   const vw = window.innerWidth;
   const vh = window.innerHeight;
@@ -136,10 +133,7 @@ function useDragSnap(
     if (!drag.dragging && Math.hypot(dx, dy) > DRAG_THRESHOLD_PX) {
       drag.dragging = true;
       setIsDragging(true);
-      if (wrapperRef.current) {
-        wrapperRef.current.style.willChange = 'transform';
-        wrapperRef.current.style.transition = 'none';
-      }
+      if (wrapperRef.current) Object.assign(wrapperRef.current.style, { willChange: 'transform', transition: 'none' });
     }
 
     if (!drag.dragging) return;
@@ -169,24 +163,22 @@ function useDragSnap(
   const onPointerUp = (event: React.PointerEvent<HTMLButtonElement>) => {
     const drag = dragRef.current;
     if (drag?.pointerId !== event.pointerId) return;
-    if (!drag.dragging) {
+    const wrapper = wrapperRef.current;
+    if (!drag.dragging || !wrapper) {
       endDrag(event);
       return;
     }
-    const wrapper = wrapperRef.current;
-    const rect = wrapper?.getBoundingClientRect();
-    const nextCorner = rect
-      ? getReleaseCorner(
-          drag.samples,
-          { dx: drag.lastX, dy: drag.lastY },
-          position,
-          window.innerWidth,
-          window.innerHeight,
-          rect.width,
-          rect.height,
-        )
-      : position;
-    if (wrapper && pixelPositioned) {
+    const rect = wrapper.getBoundingClientRect();
+    const nextCorner = getReleaseCorner(
+      drag.samples,
+      { dx: drag.lastX, dy: drag.lastY },
+      position,
+      window.innerWidth,
+      window.innerHeight,
+      rect.width,
+      rect.height,
+    );
+    if (pixelPositioned) {
       cancelRaf();
       abandonSnapRef.current?.();
       abandonSnapRef.current = animateSnap(
@@ -213,6 +205,7 @@ function useDragSnap(
   };
 
   return {
+    wrapperRef,
     isDragging,
     pixelPositionStyle,
     suppressUntilRef,
@@ -241,14 +234,7 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onPositionCommit }) => {
   const showStopControl = !open && taskRunning;
   const tone = error ? 'error' : 'processing';
 
-  const wrapperRef = useRef<HTMLDivElement | null>(null);
-
-  const { isDragging, pixelPositionStyle, suppressUntilRef, handlers } = useDragSnap(
-    position,
-    onPositionCommit,
-    isPreviewMode,
-    wrapperRef,
-  );
+  const { wrapperRef, isDragging, pixelPositionStyle, suppressUntilRef, handlers } = useDragSnap(onPositionCommit);
 
   return (
     <Surface

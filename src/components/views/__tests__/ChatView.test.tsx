@@ -13,7 +13,7 @@ import * as ScreenShareService from '../../../services/ScreenShareService';
 import { scopeStorageTo } from '../../../services/StorageService';
 import { streamClient } from '../../../services/StreamClient';
 import { liveMediaStream, ofKind } from '../../../test/fixtures';
-import { openChatTab, openWidget, renderChatHarness, renderWidget } from '../../../test/renderWidget';
+import { getComposer, openChatTab, openWidget, renderChatHarness, renderWidget } from '../../../test/renderWidget';
 import { messageText } from '../../../utils/chat';
 
 const openChat = (mode?: 'Show') => {
@@ -21,7 +21,7 @@ const openChat = (mode?: 'Show') => {
   openWidget();
   openChatTab();
   if (mode) fireEvent.click(screen.getByRole('button', { name: mode }));
-  return screen.getByPlaceholderText('Ask anything') as HTMLTextAreaElement;
+  return getComposer();
 };
 
 const send = (composer: HTMLTextAreaElement, text: string) => {
@@ -76,7 +76,7 @@ describe('a send while the stream is down', () => {
     await waitFor(() => expect(streamClient.connect).toHaveBeenCalled());
     openWidget();
     openChatTab();
-    const composer = screen.getByPlaceholderText('Ask anything') as HTMLTextAreaElement;
+    const composer = getComposer();
 
     send(composer, 'are you still there?');
     expect(composer.value).toBe('');
@@ -95,7 +95,7 @@ describe('a send while the stream is down', () => {
     await waitFor(() => expect(streamClient.connect).toHaveBeenCalled());
     openWidget();
     openChatTab();
-    const composer = screen.getByPlaceholderText('Ask anything') as HTMLTextAreaElement;
+    const composer = getComposer();
 
     send(composer, 'first attempt');
     fireEvent.change(composer, { target: { value: 'already typing something new' } });
@@ -187,7 +187,7 @@ describe('a mode the tenant disabled', () => {
     await waitFor(() => expect(streamClient.connect).toHaveBeenCalled());
     openWidget();
     openChatTab();
-    return screen.getByPlaceholderText('Ask anything') as HTMLTextAreaElement;
+    return getComposer();
   };
 
   it('is never sent: the composer falls back to the first enabled mode', async () => {
@@ -227,7 +227,7 @@ describe('clearing the chat', () => {
     await waitFor(() => expect(streamClient.connect).toHaveBeenCalledWith('chat-1'));
     openWidget();
     openChatTab();
-    send(screen.getByPlaceholderText('Ask anything') as HTMLTextAreaElement, 'hello?');
+    send(getComposer(), 'hello?');
     await waitFor(() => expect(streamClient.send).toHaveBeenCalledWith(expect.objectContaining({ type: 'chat/tell' })));
 
     chatIds.shift();
@@ -277,7 +277,7 @@ describe('a turn the api refuses as forbidden', () => {
     openWidget();
     openChatTab();
 
-    send(screen.getByPlaceholderText('Ask anything') as HTMLTextAreaElement, 'hello?');
+    send(getComposer(), 'hello?');
 
     expect(await screen.findByText('Tell is turned off for this widget')).toBeInTheDocument();
   });
