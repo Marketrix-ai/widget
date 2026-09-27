@@ -1,16 +1,37 @@
 /**
  * Shared test fixtures for widget tests. `getMockWidgetConfig`/`validSettings`/`credentialedConfig` build a
  * complete, schema-valid tenant config (preview and resolved-production shapes); `agentMessage` builds an
- * agent `ChatMessage` and `ofKind` narrows one; `mockMediaStream`/`liveMediaStream` stub the browser's
+ * agent `ChatMessage` and `ofKind` narrows one; `toolCall` builds a `tool/call` event (a click by default); `mockMediaStream`/`liveMediaStream` stub the browser's
  * un-mockable `MediaStream`, `stubRect` gives every element a layout jsdom lacks, `$` finds a tag or throws; `asStreamClientInternals` reaches `streamClient`'s private `handleMessage`/`notifyError`
  * for simulating SSE events and stream failures.
  */
 import { vi } from 'bun:test';
 
 import { WidgetSettingsDataSchema } from '../sdk/contracts/widgetSettings';
+import type { WidgetToolCall } from '../services/browserTools';
 import { streamClient } from '../services/StreamClient';
 import type { CredentialedConfig } from '../services/WidgetService';
 import type { AgentMessage, ChatMessage, ValidWidgetConfig, WidgetSettingsData } from '../types';
+
+type ToolAndArgs = WidgetToolCall extends infer Call
+  ? Call extends WidgetToolCall
+    ? Pick<Call, 'browser_tool' | 'args'>
+    : never
+  : never;
+
+export function toolCall(
+  overrides: Partial<Pick<WidgetToolCall, 'tool_call_id' | 'mode' | 'explanation'>> = {},
+  tool: ToolAndArgs = { browser_tool: 'click_element', args: { index: 1 } },
+): WidgetToolCall {
+  return {
+    type: 'tool/call',
+    tool_call_id: 'call-1',
+    mode: 'do',
+    explanation: 'Clicking the submit button',
+    ...overrides,
+    ...tool,
+  };
+}
 
 export function ofKind<K extends ChatMessage['kind']>(
   message: ChatMessage | undefined,

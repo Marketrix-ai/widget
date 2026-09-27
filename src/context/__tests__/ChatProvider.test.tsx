@@ -1,7 +1,8 @@
 /**
  * Tests for `ChatContext`'s reply placeholder lifecycle: the stale-reply watchdog, the processing signal
  * spanning reply wait rather than just the outbound request, deduping a retransmitted `tool/call`,
- * `tool/response` payload shape, and independent turns settling into their own messages. Every test
+ * `tool/response` payload shape, independent turns settling into their own messages, and every external
+ * interaction failing into human text rather than a raw error, then recovering on retry. Every test
  * calls `cleanup()` in `afterEach` — an earlier test's still-mounted `ChatProvider` otherwise keeps its
  * stream-message subscription live and double-handles a later test's broadcast `handleMessage` call.
  */
@@ -10,15 +11,14 @@ import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'bun:
 import { Profiler, useEffect } from 'react';
 
 import { useWidget } from '../../hooks/useWidget';
-import type { WidgetEvent } from '../../sdk';
 import type { executeTool } from '../../services/browserTools';
 import * as chatThread from '../../services/chatThread';
 import { claimTabId, remintTabId } from '../../services/StorageService';
 import { streamClient } from '../../services/StreamClient';
-import { agentMessage, asStreamClientInternals, ofKind } from '../../test/fixtures';
+import { agentMessage, asStreamClientInternals, ofKind, toolCall } from '../../test/fixtures';
 import { ChatHarness, renderChatHarness } from '../../test/renderWidget';
 import { advanceTimersByTimeAsync, waitFor } from '../../test/vi-compat';
-import { isPending, messageText } from '../../utils/chat';
+import { CHAT_FAILURE_TEXT, isPending, messageText } from '../../utils/chat';
 import * as log from '../../utils/log';
 import { useChatContext } from '../ChatContext';
 
@@ -150,14 +150,7 @@ describe('a retransmitted tool/call', () => {
       </ChatHarness>,
     );
 
-    const event: WidgetEvent = {
-      type: 'tool/call',
-      tool_call_id: 'tc-retransmit',
-      browser_tool: 'click_element',
-      args: { index: 1 },
-      mode: 'do',
-      explanation: 'Click it',
-    };
+    const event = toolCall({ tool_call_id: 'tc-retransmit', explanation: 'Click it' });
 
     await act(async () => {
       asStreamClientInternals().handleMessage(event);
@@ -179,14 +172,7 @@ describe('a retransmitted tool/call', () => {
 
     await act(async () => {
       screen.getByTestId('stop').click();
-      asStreamClientInternals().handleMessage({
-        type: 'tool/call',
-        tool_call_id: 'tc-after-stop',
-        browser_tool: 'click_element',
-        args: { index: 1 },
-        mode: 'do',
-        explanation: 'Click it',
-      });
+      asStreamClientInternals().handleMessage(toolCall({ tool_call_id: 'tc-after-stop', explanation: 'Click it' }));
       await advanceTimersByTimeAsync(0);
     });
 
@@ -204,16 +190,16 @@ const renderCaptured = (previewMode = true) =>
     </Profiler>
   ));
 
+const DONE_OK = { browser_tool: 'done', args: { message: 'Done', success: true } } as const;
+
 async function dispatchClickToolCall(toolCallId: string): Promise<void> {
   await act(async () => {
-    asStreamClientInternals().handleMessage({
-      type: 'tool/call',
-      tool_call_id: toolCallId,
-      browser_tool: 'click_element',
-      args: { index: 0 },
-      mode: 'do',
-      explanation: 'Click it',
-    });
+    asStreamClientInternals().handleMessage(
+      toolCall(
+        { tool_call_id: toolCallId, explanation: 'Click it' },
+        { browser_tool: 'click_element', args: { index: 0 } },
+      ),
+    );
     await advanceTimersByTimeAsync(0);
   });
 }
@@ -350,14 +336,7 @@ describe('the finish tool ends the task only when it did not fail', () => {
     mockExecuteTool.mockReset().mockResolvedValue({ success: true, result: { text: 'done' } });
 
     await act(async () => {
-      asStreamClientInternals().handleMessage({
-        type: 'tool/call',
-        tool_call_id: 'tc-finish-ok',
-        browser_tool: 'done',
-        args: { message: 'Done', success: true },
-        mode: 'do',
-        explanation: 'Done',
-      });
+      asStreamClientInternals().handleMessage(toolCall({ tool_call_id: 'tc-finish-ok', explanation: 'Done' }, DONE_OK));
       await advanceTimersByTimeAsync(0);
     });
 
@@ -370,14 +349,9 @@ describe('the finish tool ends the task only when it did not fail', () => {
     mockExecuteTool.mockReset().mockResolvedValue({ success: false, error: 'boom' });
 
     await act(async () => {
-      asStreamClientInternals().handleMessage({
-        type: 'tool/call',
-        tool_call_id: 'tc-finish-failed',
-        browser_tool: 'done',
-        args: { message: 'Done', success: true },
-        mode: 'do',
-        explanation: 'Done',
-      });
+      asStreamClientInternals().handleMessage(
+        toolCall({ tool_call_id: 'tc-finish-failed', explanation: 'Done' }, DONE_OK),
+      );
       await advanceTimersByTimeAsync(0);
     });
 
@@ -479,13 +453,93 @@ describe('a chat/error event is logged, not surfaced as a transcript message', (
 
 const ErrorProbe = () => {
   const { state, actions } = useWidget();
+  const { messages } = useChatContext();
   return (
     <>
       <div data-testid='error-banner'>{state.error ?? ''}</div>
+      <div data-testid='awaiting'>{String(state.isAwaitingReply)}</div>
+      <div data-testid='transcript'>{messages.map(m => messageText(m.parts)).join('|')}</div>
+      <div data-testid='placeholder-id'>{messages.find(isPending)?.id ?? ''}</div>
+      <button data-testid='send' onClick={() => void actions.sendTurn('hi', 'tell')} />
       <button data-testid='stop' onClick={actions.stopTask} />
     </>
   );
 };
+
+const RAW_MARKER = 'PG::ConnectionBad at db_pool.rb:42 — ECONNREFUSED 10.0.4.12:5432';
+
+const visibleText = () =>
+  `${screen.getByTestId('error-banner').textContent}|${screen.getByTestId('transcript').textContent}`;
+
+describe('external-interaction failures never reach the customer page raw, and every one recovers', () => {
+  it.each([
+    {
+      name: 'message POST rejects with a raw server body',
+      humanText: CHAT_FAILURE_TEXT,
+      run: async () => {
+        vi.spyOn(streamClient, 'send').mockRejectedValueOnce(new Error(RAW_MARKER));
+        await act(async () => screen.getByTestId('send').click());
+      },
+    },
+    {
+      name: 'an unmatched chat/error settles the placeholder',
+      humanText: CHAT_FAILURE_TEXT,
+      run: async () => {
+        await act(async () => screen.getByTestId('send').click());
+        const requestId = screen.getByTestId('placeholder-id').textContent ?? '';
+        act(() =>
+          asStreamClientInternals().handleMessage({ type: 'chat/error', request_id: requestId, error: RAW_MARKER }),
+        );
+      },
+    },
+    {
+      name: 'tool/call execution throws unexpectedly',
+      humanText: 'Something went wrong running that step. Please try again.',
+      run: async () => {
+        mockExecuteTool.mockRejectedValueOnce(new Error(RAW_MARKER));
+        await act(async () => {
+          asStreamClientInternals().handleMessage(toolCall({ tool_call_id: 'tc-fault' }));
+          await advanceTimersByTimeAsync(0);
+        });
+      },
+    },
+    {
+      name: 'the tool/response POST fails',
+      humanText: 'Could not report that step back to the assistant — it may stop responding.',
+      run: async () => {
+        vi.spyOn(streamClient, 'send').mockRejectedValueOnce(new Error(RAW_MARKER));
+        await act(async () => {
+          asStreamClientInternals().handleMessage(toolCall({ tool_call_id: 'tc-fault-2' }));
+          await advanceTimersByTimeAsync(0);
+        });
+      },
+    },
+    {
+      name: 'the chat/stop POST fails',
+      humanText: 'Could not stop the assistant — it may still be working.',
+      run: async () => {
+        vi.spyOn(streamClient, 'send').mockRejectedValueOnce(new Error(RAW_MARKER));
+        await act(async () => screen.getByTestId('stop').click());
+      },
+    },
+  ])('$name', async ({ humanText, run }) => {
+    mockExecuteTool.mockReset().mockResolvedValue({ success: true, result: { text: 'ok' } });
+    render(
+      <ChatHarness previewMode={false}>
+        <ErrorProbe />
+      </ChatHarness>,
+    );
+
+    await run();
+
+    await waitFor(() => expect(visibleText()).toContain(humanText));
+    expect(visibleText()).not.toContain(RAW_MARKER);
+    expect(screen.getByTestId('awaiting')).toHaveTextContent('false');
+
+    await act(async () => screen.getByTestId('send').click());
+    await waitFor(() => expect(screen.getByTestId('awaiting')).toHaveTextContent('true'));
+  });
+});
 
 describe('a transient stream failure banner clears once the stream recovers', () => {
   it('shows the failure, then the next registered event clears exactly that banner', async () => {

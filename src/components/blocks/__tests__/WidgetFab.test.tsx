@@ -14,7 +14,7 @@ import { domService } from '../../../services/DomService';
 import { ShowModeCancelled, showModeService } from '../../../services/ShowModeService';
 import { readLocalParsed, scopedKey } from '../../../services/StorageService';
 import { streamClient } from '../../../services/StreamClient';
-import { $, asStreamClientInternals, stubRect } from '../../../test/fixtures';
+import { $, asStreamClientInternals, stubRect, toolCall } from '../../../test/fixtures';
 import { resetDom } from '../../../test/preload';
 import { renderWidget } from '../../../test/renderWidget';
 
@@ -144,14 +144,12 @@ describe('Stop on the closed launcher while a Show step waits on the visitor', (
     await waitFor(() => expect(connect).toHaveBeenCalled());
 
     act(() => {
-      asStreamClientInternals().handleMessage({
-        type: 'tool/call',
-        tool_call_id: 'tc-show',
-        browser_tool: 'click_element',
-        args: { index: 0 },
-        mode: 'show',
-        explanation: 'Click Buy',
-      });
+      asStreamClientInternals().handleMessage(
+        toolCall(
+          { tool_call_id: 'tc-show', mode: 'show', explanation: 'Click Buy' },
+          { browser_tool: 'click_element', args: { index: 0 } },
+        ),
+      );
     });
     await waitFor(() => expect(document.getElementById('marketrix-show-highlight')).not.toBeNull());
 

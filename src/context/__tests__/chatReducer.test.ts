@@ -7,7 +7,7 @@ import { describe, expect, it } from 'bun:test';
 
 import type { WidgetEvent } from '../../sdk';
 import type { WidgetToolCall } from '../../services/browserTools';
-import { agentMessage, ofKind } from '../../test/fixtures';
+import { agentMessage, ofKind, toolCall } from '../../test/fixtures';
 import type { AgentMessage } from '../../types';
 import { CHAT_FAILURE_TEXT, isPending, messageText } from '../../utils/chat';
 import {
@@ -38,18 +38,6 @@ const idleState = (): ChatState => ({ ...runningState({ status: undefined }), ta
 const pendingReply = (id = 'req-1'): ChatState => ({
   messages: [agentMessage({ id, parts: [] })],
   task: { phase: 'idle' },
-});
-
-type ClickToolCallEvent = Extract<WidgetEvent, { type: 'tool/call'; browser_tool: 'click_element' }>;
-
-const toolCall = (overrides: Partial<ClickToolCallEvent> = {}): ClickToolCallEvent => ({
-  type: 'tool/call',
-  tool_call_id: 'call-1',
-  browser_tool: 'click_element',
-  args: { index: 1 },
-  mode: 'do',
-  explanation: 'Clicking the submit button',
-  ...overrides,
 });
 
 describe('reduceEvent — task/status', () => {
@@ -193,7 +181,7 @@ describe('reduceEvent — tool/call', () => {
   it('announces a DOM read as reading the page — nothing but screen sharing views the visitor screen', () => {
     const result = reduceEvent(
       runningState(),
-      { type: 'tool/call', tool_call_id: 'call-1', browser_tool: 'get_html', args: {}, mode: 'do', explanation: '' },
+      toolCall({ explanation: '' }, { browser_tool: 'get_html', args: {} }),
       'do',
     );
     const line = (result.messages[0]!.parts ?? []).find(part => part.type === 'progress');
@@ -318,14 +306,7 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
   it('closes the line of the tool that finished, not the newest open one', () => {
     const twoOpen = reduceEvent(
       reduceEvent(runningState({}, 'show'), toolCall({ tool_call_id: 'c1', explanation: 'click_element' }), 'show'),
-      {
-        type: 'tool/call',
-        tool_call_id: 'c2',
-        browser_tool: 'get_html',
-        args: {},
-        mode: 'show',
-        explanation: 'get_html',
-      },
+      toolCall({ tool_call_id: 'c2', mode: 'show', explanation: 'get_html' }, { browser_tool: 'get_html', args: {} }),
       'show',
     );
 
@@ -422,14 +403,10 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
 
     const called = reduceEvent(
       withTrajectory,
-      {
-        type: 'tool/call',
-        tool_call_id: 'c',
-        browser_tool: 'done',
-        args: { message: 'Wrapping up', success: true },
-        mode: 'do',
-        explanation: 'Wrapping up',
-      },
+      toolCall(
+        { tool_call_id: 'c', explanation: 'Wrapping up' },
+        { browser_tool: 'done', args: { message: 'Wrapping up', success: true } },
+      ),
       'tell',
     );
     const succeeded = reduceToolProgress(called, 'done', { status: 'completed' }, 'tell');
@@ -442,14 +419,11 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
 });
 
 describe('a Show/Do task ends with its closing message', () => {
-  const doneCall = (success: boolean, message: string): WidgetEvent => ({
-    type: 'tool/call',
-    tool_call_id: 'call-done',
-    browser_tool: 'done',
-    args: { message, success },
-    mode: 'do',
-    explanation: 'Wrapping up',
-  });
+  const doneCall = (success: boolean, message: string) =>
+    toolCall(
+      { tool_call_id: 'call-done', explanation: 'Wrapping up' },
+      { browser_tool: 'done', args: { message, success } },
+    );
 
   const runDone = (success: boolean, message: string): ChatState => {
     const called = reduceEvent(runningState({ parts: [] }, 'show'), doneCall(success, message), 'show');
