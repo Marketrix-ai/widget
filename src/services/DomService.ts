@@ -1,7 +1,7 @@
 /**
  * The numbered address space the agent drives the host page by. `reindexAndSnapshot` stamps `data-id` on
  * every indexable element of a document clone in one pass, pairing each live element with its clone by
- * document order; `getValidatedElement` resolves an index back to a live element, `notInteractableReason`
+ * document order; `getValidatedElement` resolves an index back to a live element or throws why it can't, `notInteractableReason`
  * explains why an element can't be acted on, and `domService` groups them for the tools. An element that changed
  * between turns is reported as changed rather than silently acted on.
  */
@@ -14,8 +14,6 @@ interface IndexedElement {
   element: HTMLElement;
   identity: Array<string | null>;
 }
-
-type ValidatedElementResult = { element: HTMLElement; error?: undefined } | { element: null; error: string };
 
 const index = new Map<number, IndexedElement>();
 
@@ -72,9 +70,9 @@ function notInteractableReason(element: HTMLElement, elementIndex: number): stri
   return null;
 }
 
-function getValidatedElement(elementIndex: number): ValidatedElementResult {
+function getValidatedElement(elementIndex: number): HTMLElement {
   const entry = index.get(elementIndex);
-  if (!entry) return { element: null, error: `Element ${elementIndex} not found` };
+  if (!entry) throw new Error(`Element ${elementIndex} not found`);
 
   const gone = !document.contains(entry.element);
   const changed = IDENTITY_ATTRIBUTES.some(
@@ -82,14 +80,12 @@ function getValidatedElement(elementIndex: number): ValidatedElementResult {
   );
   if (gone || changed) {
     const stale = gone ? 'no longer exists' : 'has changed';
-    return {
-      element: null,
-      error: `DOM_CHANGED: Element at index ${elementIndex} ${stale}. Call get_html to get updated indices.`,
-    };
+    throw new Error(`DOM_CHANGED: Element at index ${elementIndex} ${stale}. Call get_html to get updated indices.`);
   }
 
   const reason = notInteractableReason(entry.element, elementIndex);
-  return reason ? { element: null, error: reason } : { element: entry.element };
+  if (reason) throw new Error(reason);
+  return entry.element;
 }
 
 export const domService = { reindexAndSnapshot, notInteractableReason, getValidatedElement };

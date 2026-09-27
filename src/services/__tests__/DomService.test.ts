@@ -26,26 +26,26 @@ beforeEach(() => {
 describe('an index expires when the element behind it changes', () => {
   it('a rewritten href on the same node with the same id is stale', () => {
     const service = interactable('<a id="cta" href="/signup" style="position: fixed">Sign up</a>');
-    expect(service.getValidatedElement(0).element).not.toBeNull();
+    expect(() => service.getValidatedElement(0)).not.toThrow();
 
     document.getElementById('cta')?.setAttribute('href', '/delete-account');
 
-    expect(service.getValidatedElement(0).error).toContain('DOM_CHANGED');
+    expect(() => service.getValidatedElement(0)).toThrow('DOM_CHANGED');
   });
 
   it('an attribute the element gains after indexing is stale', () => {
     const service = interactable('<button style="position: fixed">Buy</button>');
-    expect(service.getValidatedElement(0).element).not.toBeNull();
+    expect(() => service.getValidatedElement(0)).not.toThrow();
 
     document.querySelector('button')?.setAttribute('role', 'link');
 
-    expect(service.getValidatedElement(0).error).toContain('DOM_CHANGED');
+    expect(() => service.getValidatedElement(0)).toThrow('DOM_CHANGED');
   });
 
   it('an untouched element stays addressable', () => {
     const service = interactable('<a id="cta" href="/signup" style="position: fixed">Sign up</a>');
 
-    expect(service.getValidatedElement(0).element).toBe(document.getElementById('cta'));
+    expect(service.getValidatedElement(0)).toBe($('a'));
   });
 });
 
@@ -64,7 +64,7 @@ describe('a data-id lands on the element the index really points at', () => {
     expect(tagged).toHaveLength(2);
     for (const element of tagged) {
       const index = Number(element.getAttribute('data-id'));
-      expect(domService.getValidatedElement(index).element?.getAttribute('href')).toBe(element.getAttribute('href'));
+      expect(domService.getValidatedElement(index).getAttribute('href')).toBe(element.getAttribute('href'));
     }
   });
 });
@@ -86,14 +86,14 @@ describe('the widget covering a target is not an obstacle the agent can clear', 
     );
     document.elementFromPoint = () => document.querySelector('.marketrix-widget-container');
 
-    expect(service.getValidatedElement(0).error).toBeUndefined();
+    expect(() => service.getValidatedElement(0)).not.toThrow();
   });
 
   it('still reports a host-page overlay as obscuring', () => {
     const service = interactable('<button style="position: fixed">Buy</button><div class="cookie-banner"></div>');
     document.elementFromPoint = () => document.querySelector('.cookie-banner');
 
-    expect(service.getValidatedElement(0).error).toContain('ELEMENT_OBSCURED');
+    expect(() => service.getValidatedElement(0)).toThrow('ELEMENT_OBSCURED');
   });
 
   it('names an SVG overlay by its class instead of throwing on its animated className', () => {
@@ -102,7 +102,7 @@ describe('the widget covering a target is not an obstacle the agent can clear', 
     );
     document.elementFromPoint = () => document.querySelector('svg');
 
-    expect(service.getValidatedElement(0).error).toContain('covered by svg.scrim');
+    expect(() => service.getValidatedElement(0)).toThrow('covered by svg.scrim');
   });
 });
 
@@ -126,7 +126,7 @@ describe('a control the visitor could not operate is refused at act time, not hi
   ] as const)('refuses %s', (_case, html, expectedError) => {
     const service = interactable(html);
 
-    expect(service.getValidatedElement(0).error).toContain(expectedError);
+    expect(() => service.getValidatedElement(0)).toThrow(expectedError);
   });
 
   it('still indexes the disabled control, so the agent can see what it may not click', () => {
@@ -143,10 +143,10 @@ describe('re-scanning an unchanged page is idempotent', () => {
     const b = $('a');
 
     domService.reindexAndSnapshot();
-    const firstScan = [domService.getValidatedElement(0).element, domService.getValidatedElement(1).element];
+    const firstScan = [domService.getValidatedElement(0), domService.getValidatedElement(1)];
 
     domService.reindexAndSnapshot();
-    const secondScan = [domService.getValidatedElement(0).element, domService.getValidatedElement(1).element];
+    const secondScan = [domService.getValidatedElement(0), domService.getValidatedElement(1)];
 
     expect(firstScan).toEqual([a, b]);
     expect(secondScan).toEqual(firstScan);
@@ -156,11 +156,11 @@ describe('re-scanning an unchanged page is idempotent', () => {
     document.body.innerHTML = '<button style="position: fixed">A</button>';
     const button = $('button');
     domService.reindexAndSnapshot();
-    expect(domService.getValidatedElement(0).element).toBe(button);
+    expect(domService.getValidatedElement(0)).toBe(button);
 
     document.body.innerHTML = '<a href="/b" style="position: fixed">B</a>';
     domService.reindexAndSnapshot();
 
-    expect(domService.getValidatedElement(0).element).toBe(document.querySelector('a'));
+    expect(domService.getValidatedElement(0)).toBe($('a'));
   });
 });

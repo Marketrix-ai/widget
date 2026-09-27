@@ -52,14 +52,8 @@ const SEARCH_URLS: Record<ToolArgs<'search'>['engine'], string> = {
   bing: 'https://www.bing.com/search?q=',
 };
 
-function elementAt(index: number): HTMLElement {
-  const validated = domService.getValidatedElement(index);
-  if (!validated.element) throw new Error(validated.error);
-  return validated.element;
-}
-
 function selectAt(index: number): HTMLSelectElement {
-  const found = elementAt(index);
+  const found = domService.getValidatedElement(index);
   if (!(found instanceof HTMLSelectElement)) throw new Error(`Element ${index} is not a select element`);
   return found;
 }
@@ -85,7 +79,7 @@ function search({ query, engine }: ToolArgs<'search'>): ToolExecutionResult {
 }
 
 async function clickElement(args: ToolArgs<'click_element'>): Promise<ToolExecutionResult> {
-  const element = elementAt(args.index);
+  const element = domService.getValidatedElement(args.index);
 
   element.scrollIntoView({ behavior: 'smooth', block: 'center' });
   await new Promise(resolve => setTimeout(resolve, 100));
@@ -94,7 +88,7 @@ async function clickElement(args: ToolArgs<'click_element'>): Promise<ToolExecut
 }
 
 function typeText({ index, text, clear }: ToolArgs<'type_text'>): ToolExecutionResult {
-  const element = elementAt(index);
+  const element = domService.getValidatedElement(index);
 
   if (isValueField(element)) {
     element.focus();
@@ -183,7 +177,7 @@ function getDropdownOptions({ index }: ToolArgs<'get_dropdown_options'>) {
 }
 
 function sendKeys({ index, keys }: ToolArgs<'send_keys'>): ToolExecutionResult {
-  const element = elementAt(index);
+  const element = domService.getValidatedElement(index);
   element.focus();
   element.dispatchEvent(new KeyboardEvent('keydown', { key: keys, bubbles: true, cancelable: true }));
   element.dispatchEvent(new KeyboardEvent('keyup', { key: keys, bubbles: true, cancelable: true }));
@@ -264,7 +258,7 @@ export async function executeTool<K extends WidgetToolName>(
   try {
     if (mode === 'show' && waitsForUser(browserToolName) && 'index' in args) {
       await showModeService.showToolAction({
-        element: elementAt(args.index),
+        element: domService.getValidatedElement(args.index),
         index: args.index,
         explanation: toolExplanation(browserToolName, explanation),
         browserToolName,
