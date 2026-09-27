@@ -1,8 +1,7 @@
 /**
  * Pure helpers for the chat message list: formatting (mode label and icon, timestamp, `messageText`), the tenant's
  * enabled modes, each browser tool's progress label (`toolExplanation`) and Show-mode wait (`waitsForUser`),
- * finding which message a progress event belongs to (`findMessageForProgress`, which logs rather than
- * guesses on no match), and the per-kind constructors that are the only way a `ChatMessage` is built.
+ * and the per-kind constructors that are the only way a `ChatMessage` is built.
  * `CHAT_FAILURE_TEXT` and the `SCREEN_ACCESS_*` pair are the one wording for those two situations, so a
  * visitor never sees a raw server error. Show and Do read and act on the page through the DOM whatever the
  * visitor answers, so declining screen access withholds only the view of their screen.
@@ -10,15 +9,7 @@
 import type { IconName } from '../components/base/icons';
 import { InstructionTypeSchema } from '../sdk/contracts/widgetSettings';
 import type { WidgetToolName } from '../services/browserTools';
-import type {
-  AgentMessage,
-  AgentStatus,
-  ChatMessage,
-  InstructionType,
-  MessagePart,
-  WidgetSettingsData,
-} from '../types';
-import { logWarn } from './log';
+import type { AgentStatus, ChatMessage, InstructionType, MessagePart, WidgetSettingsData } from '../types';
 import { randomId } from './randomId';
 
 export const MODES: Record<InstructionType, { label: string; icon: IconName }> = {
@@ -89,41 +80,6 @@ const hasStatus =
 export const isPending = hasStatus(PENDING_STATUSES);
 
 export const taskEnded = hasStatus(ENDED_STATUSES);
-
-interface FindMessageOptions {
-  messages: ChatMessage[];
-  isTaskRunning: boolean;
-  currentMode: InstructionType;
-}
-
-export function findMessageForProgress({
-  messages,
-  isTaskRunning,
-  currentMode,
-}: FindMessageOptions): { index: number; message: AgentMessage } | null {
-  const isAgentReply = (msg: ChatMessage): msg is AgentMessage => msg.kind === 'agent' && !taskEnded(msg);
-  const modeMatches = (msg: AgentMessage) =>
-    isPending(msg) ? msg.mode === undefined || msg.mode === currentMode : msg.mode === currentMode;
-
-  const ranked: Array<(msg: AgentMessage) => boolean> = [];
-  if (isTaskRunning) {
-    ranked.push(msg => modeMatches(msg) && isPending(msg), modeMatches);
-  }
-  ranked.push(isPending, () => true);
-
-  const start = messages.findLastIndex(taskEnded) + 1;
-
-  for (const matches of ranked) {
-    const index = messages.findLastIndex((msg, i) => i >= start && isAgentReply(msg) && matches(msg));
-    const message = messages[index];
-    if (message?.kind === 'agent') return { index, message };
-  }
-
-  logWarn(
-    `[MessageFinder] No message found for progress update: totalMessages=${messages.length} isTaskRunning=${isTaskRunning} currentMode=${currentMode}`,
-  );
-  return null;
-}
 
 const newMessage = (kind: ChatMessage['kind'], content: string) => ({
   id: `${kind}-${randomId()}`,
