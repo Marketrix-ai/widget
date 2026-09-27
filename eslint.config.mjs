@@ -51,6 +51,10 @@ export default [
           message:
             'reads the shadow HOST, not the focused widget element — use activeElementIn() from components/navigation/MessengerShell',
         },
+        { property: 'with', message: 'post-floor ES2023 array method; the Firefox 111 floor lacks it' },
+        { property: 'toSorted', message: 'post-floor ES2023 array method; the Firefox 111 floor lacks it' },
+        { property: 'toReversed', message: 'post-floor ES2023 array method; the Firefox 111 floor lacks it' },
+        { property: 'toSpliced', message: 'post-floor ES2023 array method; the Firefox 111 floor lacks it' },
       ],
       'no-restricted-globals': [
         'error',
