@@ -12,7 +12,6 @@ import { withClass } from './layoutProps';
 interface IconProps extends ComponentPropsWithRef<'svg'> {
   name: IconName;
   size?: number;
-  className?: string;
 }
 
 export function Icon({ name, size = 16, className, ref, ...props }: IconProps) {

@@ -8,11 +8,10 @@ import type { CSSProperties, ElementType, Ref } from 'react';
 import { getElevationStyle, type ShadowToken } from '../../design-system/component-tokens';
 import { type LayoutProps, splitLayout } from './layoutProps';
 
-export interface SurfaceProps extends LayoutProps, Omit<React.HTMLAttributes<HTMLElement>, 'className'> {
+export interface SurfaceProps extends LayoutProps, React.HTMLAttributes<HTMLElement> {
   as?: ElementType;
   elevation?: ShadowToken;
   floatingCard?: boolean;
-  className?: string;
   ref?: Ref<HTMLDivElement>;
 }
 
@@ -21,7 +20,7 @@ const FLOATING_CARD = { border: true, elevation: 'card', rounded: 'xl' } satisfi
 const FLOATING_CARD_STYLE: CSSProperties = { ...CARD_COLORS, padding: '8px 12px', margin: '0 12px 12px 12px' };
 
 export function Surface(props: SurfaceProps) {
-  const { as: Component = 'div', className, style, floatingCard, ref, ...own } = props;
+  const { as: Component = 'div', style, floatingCard, ref, ...own } = props;
   const { elevation, ...rest } = floatingCard ? { ...FLOATING_CARD, ...own } : own;
   const [layoutStyle, domProps] = splitLayout(rest);
 
@@ -29,7 +28,6 @@ export function Surface(props: SurfaceProps) {
     <Component
       {...domProps}
       ref={ref}
-      className={className}
       style={{ ...(floatingCard && FLOATING_CARD_STYLE), ...getElevationStyle(elevation), ...layoutStyle, ...style }}
     />
   );
