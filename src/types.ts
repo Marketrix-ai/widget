@@ -34,8 +34,6 @@ export type AgentMessage = Extract<ChatMessage, { kind: 'agent' }>;
 
 export type MessagePart = ChatMessage['parts'][number];
 
-export type ProgressPart = Extract<MessagePart, { type: 'progress' }>;
-
 export type AgentStatus = NonNullable<AgentMessage['status']>;
 
 export const WIDGET_VIEWS = ['home', 'chat'] as const;
