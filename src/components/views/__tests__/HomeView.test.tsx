@@ -1,7 +1,8 @@
 /**
  * `HomeView` renders each suggested-action chip caption verbatim — a `show`/`do` caption is already
  * prefixed by `getSuggestedActionsFromConfig`, so prefixing again in the view would double it; a chip whose
- * mode the tenant disabled is not offered.
+ * mode the tenant disabled is not offered. A chip inlines no text colour, so its hover colour from the
+ * stylesheet keeps contrast against the accent background.
  */
 import { screen } from '@testing-library/react';
 import { describe, expect, it } from 'bun:test';
@@ -22,6 +23,12 @@ describe('HomeView suggested actions', () => {
 
     expect(screen.getByRole('button', { name: 'What does my conversion rate mean?' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Show me how to add a new product' })).toBeInTheDocument();
+  });
+
+  it('inlines no text colour, leaving the chip and its hover to the stylesheet', () => {
+    openHome([{ chip_text: 'Pricing?', chip_mode: 'tell' }]);
+
+    expect(screen.getByRole('button', { name: 'Pricing?' }).style.color).toBe('');
   });
 });
 

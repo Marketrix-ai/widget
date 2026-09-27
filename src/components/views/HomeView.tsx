@@ -61,7 +61,7 @@ export const HomeView: React.FC = () => {
               full
               disabled={isComposerLocked}
               onClick={() => onChipClick(action)}
-              style={{ color: config.widget_text_color, paddingTop: '8px', paddingBottom: '8px' }}
+              style={{ paddingTop: '8px', paddingBottom: '8px' }}
             >
               <Text as='span' weight='normal' tight>
                 {action.text}
