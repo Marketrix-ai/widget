@@ -29,11 +29,6 @@ const JUSTIFY = {
   around: 'space-around',
 } as const;
 
-const BORDER_SIDE = {
-  top: 'borderTopWidth',
-  bottom: 'borderBottomWidth',
-} as const;
-
 export interface LayoutProps {
   padding?: SpacingToken;
   paddingX?: SpacingToken;
@@ -57,77 +52,59 @@ export interface LayoutProps {
   minWidth?: '0';
   minHeight?: '0';
 
-  border?: boolean | keyof typeof BORDER_SIDE;
+  border?: boolean | 'top' | 'bottom';
   rounded?: RadiusToken | undefined;
 
   animate?: 'fadeIn' | undefined;
 }
 
+const BORDER = { borderColor: 'var(--border)', borderStyle: 'solid' } as const;
+
+type LayoutValues = { [K in keyof LayoutProps]-?: NonNullable<LayoutProps[K]> };
+
+const RESOLVE: { [K in keyof LayoutValues]: (value: LayoutValues[K]) => CSSProperties } = {
+  padding: v => ({ padding: SPACING_SCALE[v] }),
+  paddingX: v => ({ paddingLeft: SPACING_SCALE[v], paddingRight: SPACING_SCALE[v] }),
+  paddingY: v => ({ paddingTop: SPACING_SCALE[v], paddingBottom: SPACING_SCALE[v] }),
+  paddingTop: v => ({ paddingTop: SPACING_SCALE[v] }),
+  paddingBottom: v => ({ paddingBottom: SPACING_SCALE[v] }),
+  gap: v => ({ gap: SPACING_SCALE[v] }),
+  align: v => ({ alignItems: ALIGN[v] }),
+  justify: v => ({ justifyContent: JUSTIFY[v] }),
+  grow: v => (v ? { flex: '1 1 0%' } : {}),
+  shrink: v => (v ? {} : { flexShrink: 0 }),
+  position: position => ({ position }),
+  inset: inset => ({ inset }),
+  overflow: overflow => ({ overflow }),
+  overflowY: overflowY => ({ overflowY }),
+  width: () => ({ width: '100%' }),
+  height: () => ({ height: '100%' }),
+  minWidth: () => ({ minWidth: 0 }),
+  minHeight: () => ({ minHeight: 0 }),
+  border: v =>
+    v === false
+      ? {}
+      : v === true
+        ? { ...BORDER, borderWidth: '1px' }
+        : v === 'top'
+          ? { ...BORDER, borderTopWidth: '1px' }
+          : { ...BORDER, borderBottomWidth: '1px' },
+  rounded: v => ({ borderRadius: RADIUS[v] }),
+  animate: () => ({ animation: 'mtx-fade-in 0.5s ease-out' }),
+};
+
+const isLayoutKey = (key: string): key is keyof LayoutProps => key in RESOLVE;
+const LAYOUT_KEYS = Object.keys(RESOLVE).filter(isLayoutKey);
+const resolve = <K extends keyof LayoutValues>(key: K, value: LayoutValues[K]) => RESOLVE[key](value);
+
 export function splitLayout<T extends LayoutProps>(props: T): [CSSProperties, Omit<T, keyof LayoutProps>] {
-  const {
-    padding,
-    paddingX,
-    paddingY,
-    paddingTop,
-    paddingBottom,
-    gap,
-    align,
-    justify,
-    grow,
-    shrink,
-    position,
-    inset,
-    overflow,
-    overflowY,
-    width,
-    height,
-    minWidth,
-    minHeight,
-    border,
-    rounded,
-    animate,
-    ...rest
-  } = props;
   const style: CSSProperties = {};
-
-  if (padding !== undefined) style.padding = SPACING_SCALE[padding];
-  if (paddingX !== undefined) {
-    style.paddingLeft = SPACING_SCALE[paddingX];
-    style.paddingRight = SPACING_SCALE[paddingX];
+  const rest = { ...props };
+  for (const key of LAYOUT_KEYS) {
+    const value = props[key];
+    delete rest[key];
+    if (value !== undefined) Object.assign(style, resolve(key, value));
   }
-  if (paddingY !== undefined) {
-    style.paddingTop = SPACING_SCALE[paddingY];
-    style.paddingBottom = SPACING_SCALE[paddingY];
-  }
-  if (paddingTop !== undefined) style.paddingTop = SPACING_SCALE[paddingTop];
-  if (paddingBottom !== undefined) style.paddingBottom = SPACING_SCALE[paddingBottom];
-  if (gap !== undefined) style.gap = SPACING_SCALE[gap];
-
-  if (align !== undefined) style.alignItems = ALIGN[align];
-  if (justify !== undefined) style.justifyContent = JUSTIFY[justify];
-  if (grow === true) style.flex = '1 1 0%';
-  if (shrink === false) style.flexShrink = 0;
-
-  if (position !== undefined) style.position = position;
-  if (inset !== undefined) style.inset = inset;
-
-  if (overflow !== undefined) style.overflow = overflow;
-  if (overflowY !== undefined) style.overflowY = overflowY;
-  if (width === 'full') style.width = '100%';
-  if (height === 'full') style.height = '100%';
-  if (minWidth === '0') style.minWidth = 0;
-  if (minHeight === '0') style.minHeight = 0;
-
-  if (border !== undefined && border !== false) {
-    style.borderColor = 'var(--border)';
-    style.borderStyle = 'solid';
-    if (border === true) style.borderWidth = '1px';
-    else style[BORDER_SIDE[border]] = '1px';
-  }
-
-  if (rounded !== undefined) style.borderRadius = RADIUS[rounded];
-  if (animate === 'fadeIn') style.animation = 'mtx-fade-in 0.5s ease-out';
-
   return [style, rest];
 }
 
