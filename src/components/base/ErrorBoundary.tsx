@@ -1,14 +1,14 @@
 /**
  * The widget's one React error boundary, so a subtree that throws while rendering cannot tear down the
  * widget's whole React root.
- * `componentDidCatch` logs the error under `label`; `render` shows the optional `fallback`, or nothing.
+ * `componentDidCatch` logs the error under `label`; `render` shows the `fallback`.
  */
 import React from 'react';
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
   label: string;
-  fallback?: React.ReactNode;
+  fallback: React.ReactNode;
 }
 
 export class ErrorBoundary extends React.Component<ErrorBoundaryProps, { hasError: boolean }> {
@@ -23,6 +23,6 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, { hasErro
   }
 
   override render() {
-    return this.state.hasError ? (this.props.fallback ?? null) : this.props.children;
+    return this.state.hasError ? this.props.fallback : this.props.children;
   }
 }
