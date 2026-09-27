@@ -56,7 +56,16 @@ async function bootLocal(): Promise<{ base: string; container: string }> {
     throw new Error('dist/widget.mjs missing — run `bun run build` first');
   precompress(join(ROOT, 'dist/widget.mjs'));
 
-  execFileSync('docker', ['build', '--target', 'runtime', '-t', IMAGE, '.'], { cwd: ROOT, stdio: 'inherit' });
+  const bunVersion = readFileSync(join(ROOT, 'package.json'), 'utf8').match(/"packageManager": "bun@([^"]+)"/)?.[1];
+  if (!bunVersion) throw new Error('package.json pins no bun@ packageManager');
+  execFileSync(
+    'docker',
+    ['build', '--target', 'runtime', '--build-arg', `BUN_VERSION=${bunVersion}`, '-t', IMAGE, '.'],
+    {
+      cwd: ROOT,
+      stdio: 'inherit',
+    },
+  );
   const container = execFileSync('docker', ['run', '-d', '-P', IMAGE]).toString().trim();
   const port = execFileSync('docker', ['port', container, '9001/tcp'])
     .toString()

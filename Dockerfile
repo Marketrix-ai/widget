@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1.7
 # Widget image: `dev` runs Vite for Tilt, `builder` bundles and precompresses, `runtime` serves via nginx.
 # `runtime` copies an explicit allowlist, never all of `dist/`, so sourcemaps and `.d.ts` stay unpublished.
-FROM oven/bun:1.4.2-alpine AS base
+ARG BUN_VERSION
+FROM oven/bun:${BUN_VERSION}-alpine AS base
 WORKDIR /app
 COPY package.json bun.lock ./
 RUN --mount=type=cache,target=/root/.bun/install/cache bun install --frozen-lockfile
