@@ -13,18 +13,12 @@ export const WIDGET_SHADOW_HOST_CLASS = 'marketrix-widget-container';
 const TABBABLE_SELECTOR =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+const INTERACTIVE_TAGS = new Set(['button', 'input', 'textarea', 'select']);
 const INTERACTIVE_ROLES = new Set(['button', 'link', 'textbox', 'checkbox', 'radio', 'switch', 'tab', 'menuitem']);
-
-function isAriaHidden(el: Element): boolean {
-  for (let node: Element | null = el; node; node = node.parentElement) {
-    if (node.getAttribute('aria-hidden') === 'true') return true;
-  }
-  return false;
-}
 
 export function focusablesIn(root: ParentNode): HTMLElement[] {
   return Array.from(root.querySelectorAll<HTMLElement>(TABBABLE_SELECTOR)).filter(
-    el => el.offsetParent !== null && !isAriaHidden(el),
+    el => el.offsetParent !== null && !el.closest('[aria-hidden="true"]'),
   );
 }
 
@@ -37,10 +31,7 @@ export function disabledReason(el: Element): string | null {
 export function isIndexable(el: Element): boolean {
   const tag = el.tagName.toLowerCase();
   const interactive =
-    tag === 'button' ||
-    tag === 'input' ||
-    tag === 'textarea' ||
-    tag === 'select' ||
+    INTERACTIVE_TAGS.has(tag) ||
     (tag === 'a' && el.hasAttribute('href')) ||
     INTERACTIVE_ROLES.has(el.getAttribute('role') ?? '') ||
     el.getAttribute('contenteditable') === 'true' ||
