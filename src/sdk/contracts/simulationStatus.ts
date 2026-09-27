@@ -1,16 +1,16 @@
 /**
- * The Simulation status vocabulary, a leaf so the widget's mirror carries it without the foundation entities:
- * `SimulationStatusSchema`, the terminal and active subsets, and `isSimulationTerminal`.
+ * The Simulation status schema, a leaf so the widget's mirror carries it without the foundation entities:
+ * `SimulationStatusSchema`, the active subset and `isSimulationTerminal`.
  */
 import { z } from 'zod';
 
-export const SimulationStatusSchema = z.enum(['queued', 'running', 'has_question', 'completed', 'failed', 'stopped']);
+import { SIMULATION_STATUSES, SIMULATION_TERMINAL_STATUSES } from './jobStatuses';
+
+export const SimulationStatusSchema = z.enum(SIMULATION_STATUSES);
 
 export type SimulationStatus = z.infer<typeof SimulationStatusSchema>;
 
-const SimulationTerminalStatusSchema = SimulationStatusSchema.extract(['completed', 'failed', 'stopped']);
-
-export const SIMULATION_TERMINAL_STATUSES = SimulationTerminalStatusSchema.options;
+const SimulationTerminalStatusSchema = SimulationStatusSchema.extract(SIMULATION_TERMINAL_STATUSES);
 
 export const SIMULATION_ACTIVE_STATUSES = SimulationStatusSchema.exclude(SIMULATION_TERMINAL_STATUSES).options;
 
