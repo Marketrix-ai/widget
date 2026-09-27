@@ -1,9 +1,6 @@
 /**
- * `LiveDot` — the ping/core span pair that keys `index.css`'s `mtx-live-dot*` rules, the pulsing dot the
- * header's screen-share button and a video message's "Live" pill both wear. The markup contract is fixed
- * by the CSS (an `mtx-live-dot` wrapper around an `mtx-live-dot-ping` and an `mtx-live-dot-core`); only
- * `style` on the wrapper varies per caller (positioning it absolutely over an icon, or tinting it via
- * `currentColor`).
+ * `LiveDot` — the pulsing ping/core dot keyed by `index.css`'s `mtx-live-dot*` rules, worn by the header's
+ * screen-share button and a video message's "Live" pill; callers vary only the wrapper's `style`.
  */
 import type { CSSProperties } from 'react';
 

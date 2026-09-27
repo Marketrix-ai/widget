@@ -1,10 +1,9 @@
 /* The widget's entire style surface: it mounts into a closed shadow root, so nothing cascades in from
    the host page. Layout lives in inline styles; this file carries only what a style attribute cannot —
    pseudo-classes, pseudo-elements, keyframes and the `data-*` variant matrices. Tokens sit on
-   `:root, :host`. The reset wraps every element-targeting rule in `:where()` so it weighs zero and
+   `:host`. The reset wraps every element-targeting rule in `:where()` so it weighs zero and
    never outranks a component class. */
 
-:root,
 :host {
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -113,7 +112,6 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease-in-out;
 }
 
 .mtx-button {
@@ -340,7 +338,6 @@
   cursor: pointer;
   background: var(--secondary-bg);
   color: var(--foreground-muted);
-  transition: all 0.2s ease-in-out;
 }
 
 .mtx-mode-chip[data-active='true'] {
@@ -572,8 +569,8 @@
 .mtx-live-dot-core {
   position: relative;
   display: inline-flex;
-  height: 6px;
-  width: 6px;
+  height: 100%;
+  width: 100%;
   border-radius: var(--radius-pill);
   background: currentColor;
 }
@@ -605,21 +602,20 @@
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-dasharray: 40 120;
+  stroke: rgb(var(--glow-rgb));
+  filter: drop-shadow(0 0 3px rgba(var(--glow-rgb), 0.7));
   animation: mtx-fab-ring-travel 1.9s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
-.mtx-fab-ring[data-tone='processing'] rect {
-  stroke: rgb(var(--status-processing-rgb));
-  filter: drop-shadow(0 0 3px rgba(var(--status-processing-rgb), 0.7));
+[data-tone='processing'] {
+  --glow-rgb: var(--status-processing-rgb);
 }
 
-.mtx-fab-ring[data-tone='error'] rect {
-  stroke: rgb(var(--status-error-rgb));
-  filter: drop-shadow(0 0 3px rgba(var(--status-error-rgb), 0.7));
+[data-tone='error'] {
+  --glow-rgb: var(--status-error-rgb);
 }
 
 .mtx-fab-glow[data-tone='processing'] {
-  --glow-rgb: var(--status-processing-rgb);
   --glow-op-base: 0.72;
   --glow-op-peak: 1;
   --glow-op-near: 0.38;
@@ -630,7 +626,6 @@
 }
 
 .mtx-fab-glow[data-tone='error'] {
-  --glow-rgb: var(--status-error-rgb);
   --glow-op-base: 0.65;
   --glow-op-peak: 0.95;
   --glow-op-near: 0.34;
@@ -644,12 +639,13 @@
   animation: mtx-screen-edge-pulse 1.6s ease-in-out infinite;
 }
 
-[data-view-transition][data-direction='forward'] {
-  animation: mtx-view-slide-forward 300ms both;
+[data-view-transition][data-direction] {
+  --slide-from: 20px;
+  animation: mtx-view-slide 300ms both;
 }
 
 [data-view-transition][data-direction='back'] {
-  animation: mtx-view-slide-back 300ms both;
+  --slide-from: -20px;
 }
 
 @keyframes mtx-spin {
@@ -771,20 +767,9 @@
   }
 }
 
-@keyframes mtx-view-slide-forward {
+@keyframes mtx-view-slide {
   from {
-    transform: translateX(20px);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-@keyframes mtx-view-slide-back {
-  from {
-    transform: translateX(-20px);
+    transform: translateX(var(--slide-from));
     opacity: 0;
   }
   to {

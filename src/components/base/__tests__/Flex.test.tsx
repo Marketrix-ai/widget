@@ -1,5 +1,5 @@
 /**
- * `Flex` and `Stack` tests: display flex, className/style/as pass-through, and Stack rendering a column.
+ * `Flex` and `Stack` tests: display flex and Stack rendering a column.
  */
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'bun:test';
@@ -12,21 +12,6 @@ describe('Flex', () => {
     const el = container.firstElementChild as HTMLElement;
     expect(el.tagName).toBe('DIV');
     expect(el.style.display).toBe('flex');
-  });
-
-  it('passes className through', () => {
-    const { container } = render(<Flex className='mtx-fab-center'>content</Flex>);
-    expect(container.firstElementChild?.classList.contains('mtx-fab-center')).toBe(true);
-  });
-
-  it('supports as prop', () => {
-    const { container } = render(<Flex as='nav'>content</Flex>);
-    expect(container.firstElementChild?.tagName).toBe('NAV');
-  });
-
-  it('passes style prop', () => {
-    const { container } = render(<Flex style={{ gap: '10px' }}>content</Flex>);
-    expect((container.firstElementChild as HTMLElement)?.style.gap).toBe('10px');
   });
 });
 

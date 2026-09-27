@@ -1,15 +1,13 @@
 /**
- * The one home for `vitest`-compat `vi.*` helpers bun's own `vi` shim doesn't implement: `mocked`/
- * `hoisted` type and hoisting shims, `advanceTimersByTimeAsync`/`waitFor` for fake-timer-aware polling,
+ * The one home for `vitest`-compat `vi.*` helpers bun's own `vi` shim doesn't implement: the `mocked` type
+ * shim, `advanceTimersByTimeAsync`/`waitFor` for fake-timer-aware polling,
  * `restoreModuleAfterAll` to un-mock a module after a suite (the fallback for when `vi.spyOn` can't patch
  * a mocked namespace, e.g. an oRPC client `Proxy` whose own property-assignment traps ignore it), and
  * `mockSdkModule` to type-check an `sdk` mock against the real client.
  */
 import { afterAll, type Mock, vi } from 'bun:test';
 
-import type { sdk } from '../sdk';
-
-type RealSdk = typeof sdk;
+import type { WidgetClient } from '../sdk';
 
 type Mocked<T> = T extends (...args: infer A) => infer R
   ? Mock<(...args: A) => R>
@@ -17,10 +15,6 @@ type Mocked<T> = T extends (...args: infer A) => infer R
 
 export function mocked<T>(item: T): Mocked<T> {
   return item as Mocked<T>;
-}
-
-export function hoisted<T>(factory: () => T): T {
-  return factory();
 }
 
 export async function advanceTimersByTimeAsync(ms: number): Promise<void> {
@@ -48,6 +42,6 @@ export function restoreModuleAfterAll(specifier: string, importReal: () => Promi
   });
 }
 
-export function mockSdkModule(procedures: Partial<RealSdk>): { sdk: Partial<RealSdk> } {
-  return { sdk: procedures };
+export function mockSdkModule(procedures: Partial<WidgetClient>): { getSdk: () => Partial<WidgetClient> } {
+  return { getSdk: () => procedures };
 }

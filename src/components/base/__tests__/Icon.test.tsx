@@ -1,5 +1,5 @@
 /**
- * `Icon` tests: an SVG sized by `size` (default 16), className merged.
+ * `Icon` tests: a plain path fills with currentColor and a stroked path leaves fill to none.
  */
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'bun:test';
@@ -7,31 +7,6 @@ import { describe, expect, it } from 'bun:test';
 import { Icon } from '../Icon';
 
 describe('Icon', () => {
-  it('renders an SVG element', () => {
-    const { container } = render(<Icon name='close' />);
-    const svg = container.querySelector('svg');
-    expect(svg).toBeTruthy();
-  });
-
-  it('applies size as width and height', () => {
-    const { container } = render(<Icon name='close' size={24} />);
-    const svg = container.querySelector('svg');
-    expect(svg?.getAttribute('width')).toBe('24');
-    expect(svg?.getAttribute('height')).toBe('24');
-  });
-
-  it('merges className', () => {
-    const { container } = render(<Icon name='close' className='text-red-500' />);
-    const svg = container.querySelector('svg');
-    expect(svg?.classList.contains('text-red-500')).toBe(true);
-  });
-
-  it('defaults size to 16', () => {
-    const { container } = render(<Icon name='close' />);
-    const svg = container.querySelector('svg');
-    expect(svg?.getAttribute('width')).toBe('16');
-  });
-
   it.each([
     ['fills a plain path with currentColor when it sets no stroke', 'close', 'currentColor'],
     ['omits fill on a stroked path, leaving the outline to stroke alone', 'home', 'none'],

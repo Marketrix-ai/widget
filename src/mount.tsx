@@ -1,14 +1,9 @@
 /**
- * The widget's mount lifecycle behind `index.tsx`: the closed-shadow host, the React root, the one live
- * widget, and the script-tag auto-init path.
- * `renderWidget` renders one widget into its own closed shadow root and returns its teardown.
- * `initWidget` resolves credentials and mounts, coalescing concurrent calls and rejecting when the widget
- * cannot load; `previewConfig` throws on invalid preview settings; `mountPreview` mounts them with no api;
- * `unmountWidget` tears everything down, including the show-mode overlay outside the shadow root;
- * `updateMarketrixConfig` re-mounts with new client options. `showHostPageNotice` toasts before the widget
- * exists. `window.__mtx` marks a live widget and survives the module executing twice. `widget_enabled` false
- * creates no chat id, stream or recording, and `mtx-api-host` has no default, since an unset host would
- * silently post widget traffic at the host page's own origin.
+ * The widget's mount lifecycle behind `index.tsx`: `renderWidget` mounts one widget in its own closed shadow
+ * root, `initWidget` resolves credentials and mounts (coalescing concurrent calls), `previewConfig`/`mountPreview`
+ * mount settings with no api, `unmountWidget`/`updateMarketrixConfig` tear down or re-mount, and
+ * `autoInitializeWidget` drives the script-tag path. `window.__mtx` survives the module executing twice, and
+ * `mtx-api-host` has no default because an unset host would post widget traffic at the host page's own origin.
  */
 import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
@@ -25,12 +20,7 @@ import { stopScreenShare } from './services/ScreenShareService';
 import { showModeService } from './services/ShowModeService';
 import { scopeStorageTo } from './services/StorageService';
 import { streamClient } from './services/StreamClient';
-import {
-  type CredentialedConfig,
-  invalidSettingsMessage,
-  loadWidgetConfig,
-  parseWidgetSettings,
-} from './services/WidgetService';
+import { type CredentialedConfig, loadWidgetConfig, parseWidgetSettingsOrThrow } from './services/WidgetService';
 import type { ClientOwnedConfig, MarketrixConfig, ValidWidgetConfig, WidgetSettingsData } from './types';
 import { WIDGET_SHADOW_HOST_CLASS } from './utils/dom';
 import { errorMessage } from './utils/errors';
@@ -101,9 +91,7 @@ function mountActive(config: ValidWidgetConfig, host: HTMLElement | undefined, i
 }
 
 export function previewConfig(settings: WidgetSettingsData, baseConfig: ClientOwnedConfig = {}): ValidWidgetConfig {
-  const parsed = parseWidgetSettings(settings);
-  if (parsed.invalidFields) throw new Error(`Marketrix Widget: ${invalidSettingsMessage(parsed.invalidFields)}`);
-  return { ...baseConfig, ...parsed.settings, isPreviewMode: true };
+  return { ...baseConfig, ...parseWidgetSettingsOrThrow(settings), isPreviewMode: true };
 }
 
 export function mountPreview(config: ValidWidgetConfig, host: HTMLElement | undefined): void {
@@ -239,11 +227,6 @@ export const autoInitializeWidget = (): void => {
   const styleNonce = script.getAttribute('mtx-style-nonce') ?? undefined;
 
   if (!mtxId || !mtxKey || !mtxApiHost) {
-    console.error('[AutoInit] Missing required attributes:', {
-      hasMtxId: !!mtxId,
-      hasMtxKey: !!mtxKey,
-      hasMtxApiHost: !!mtxApiHost,
-    });
     showHostPageNotice('Please configure mtx-id, mtx-key and mtx-api-host', 'error', styleNonce);
     return;
   }

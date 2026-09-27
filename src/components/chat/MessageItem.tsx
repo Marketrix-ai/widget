@@ -62,27 +62,22 @@ const MessageBody: React.FC<{ message: ChatMessage; isLastMessage: boolean; isTa
 
   return (
     <Stack gap='sm'>
-      {message.parts.map((part, index) => {
-        if (part.type === 'text') {
-          if (!part.content) return null;
-          return (
-            <Text
-              as='div'
-              key={`part-${index}`}
-              size='sm'
-              weight='medium'
-              style={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap', marginBottom: '4px' }}
-            >
-              {part.content}
-            </Text>
-          );
-        }
-        return (
-          <Text as='div' key={`part-${index}`} size='xs' weight='medium' style={{ whiteSpace: 'pre-wrap' }}>
+      {message.parts.map((part, index) =>
+        part.type === 'text' && !part.content ? null : (
+          <Text
+            as='div'
+            key={`part-${index}`}
+            size={part.type === 'text' ? 'sm' : 'xs'}
+            weight='medium'
+            style={{
+              whiteSpace: 'pre-wrap',
+              ...(part.type === 'text' && { wordBreak: 'break-word', marginBottom: '4px' }),
+            }}
+          >
             {part.content}
           </Text>
-        );
-      })}
+        ),
+      )}
 
       {((pending && !message.parts.some(p => p.type === 'text')) || stillWorking) && (
         <Thinking isWaitingForUser={isWaitingForUser} />
@@ -111,12 +106,13 @@ const MessageItemComponent: React.FC<MessageItemProps> = ({
   }
 
   const isUser = message.kind === 'user' || message.kind === 'screenshare';
-  const leadingIcon =
+  const leadingIcon: IconName | undefined =
     message.kind === 'user' && (message.mode === 'show' || message.mode === 'do')
-      ? ('mousePointerClick' as const)
+      ? 'mousePointerClick'
       : message.kind === 'screenAccess' || waitsForVisitor(message)
-        ? ('checkCircle' as const)
+        ? 'checkCircle'
         : undefined;
+  const body = <MessageBody message={message} isLastMessage={isLastMessage} isTaskRunning={isTaskRunning} />;
   const status = message.kind === 'agent' && message.status ? STATUS_ICONS[message.status] : undefined;
 
   return (
@@ -129,21 +125,7 @@ const MessageItemComponent: React.FC<MessageItemProps> = ({
     >
       <Flex align='start' gap='sm' width='full'>
         <Flex shrink={false} style={{ width: '20px', height: '20px', marginTop: '6px' }}>
-          {!isUser && (
-            <Avatar
-              src={MarketrixIcon}
-              alt='Marketrix AI'
-              size={20}
-              fit='cover'
-              rounded='lg'
-              style={{
-                border: 'none',
-                outline: 'none',
-                display: 'block',
-                backgroundColor: 'transparent',
-              }}
-            />
-          )}
+          {!isUser && <Avatar src={MarketrixIcon} alt='Marketrix AI' size={20} fit='cover' rounded='lg' />}
         </Flex>
 
         <Stack
@@ -165,12 +147,10 @@ const MessageItemComponent: React.FC<MessageItemProps> = ({
               <Flex shrink={false} style={{ marginTop: '3px' }}>
                 <Icon name={leadingIcon} size={13} />
               </Flex>
-              <Stack grow>
-                <MessageBody message={message} isLastMessage={isLastMessage} isTaskRunning={isTaskRunning} />
-              </Stack>
+              <Stack grow>{body}</Stack>
             </Flex>
           ) : (
-            <MessageBody message={message} isLastMessage={isLastMessage} isTaskRunning={isTaskRunning} />
+            body
           )}
 
           {message.kind === 'screenAccess' && !message.screenShareStatus && (

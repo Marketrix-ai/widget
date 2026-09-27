@@ -242,15 +242,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setError(undefined);
       }
 
-      let toolRuns: WidgetToolCall[] = [];
-      commit(s => {
-        const result = reduceEvent(s, event, currentModeRef.current);
-        toolRuns = result.toolRuns;
-        return result.state;
-      });
-
-      for (const run of toolRuns) {
-        startToolCall(run).catch((error: unknown) => {
+      const stopped = stateRef.current.task.phase === 'stopped';
+      commit(s => reduceEvent(s, event, currentModeRef.current));
+      if (event.type === 'tool/call' && !stopped) {
+        startToolCall(event).catch((error: unknown) => {
           console.error('[Widget] Tool call failed:', error);
           setError('Something went wrong running that step. Please try again.');
         });

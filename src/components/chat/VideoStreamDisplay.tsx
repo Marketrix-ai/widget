@@ -38,26 +38,17 @@ const Overlay: React.FC<{ label: string; children: React.ReactNode }> = ({ label
 
 export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [hasError, setHasError] = useState(false);
+  const [phase, setPhase] = useState<'loading' | 'live' | 'failed'>('loading');
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
-    setIsLoaded(false);
-    setHasError(false);
-
+    setPhase('loading');
     video.srcObject = stream;
 
-    const handleLoadedMetadata = () => {
-      setIsLoaded(true);
-    };
-
-    const handleError = () => {
-      setHasError(true);
-      setIsLoaded(false);
-    };
+    const handleLoadedMetadata = () => setPhase(prev => (prev === 'failed' ? prev : 'live'));
+    const handleError = () => setPhase('failed');
 
     video.addEventListener('loadedmetadata', handleLoadedMetadata);
     video.addEventListener('error', handleError);
@@ -65,7 +56,7 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
     video.play().catch((error: unknown) => {
       if (error instanceof Error && error.name === 'AbortError') return;
       console.error('[Widget] Failed to play the screen-share stream:', error);
-      setHasError(true);
+      setPhase('failed');
     });
 
     return () => {
@@ -83,13 +74,13 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
       elevation='button'
       style={{ marginBottom: '4px', borderRadius: OVERLAY_BORDER_RADIUS, backgroundColor: '#000000' }}
     >
-      {!isLoaded && !hasError && (
+      {phase === 'loading' && (
         <Overlay label='Loading stream...'>
           <Spinner size='lg' style={{ color: VIDEO_WHITE }} />
         </Overlay>
       )}
 
-      {hasError && (
+      {phase === 'failed' && (
         <Overlay label='Failed to load stream'>
           <Icon name='alertCircle' size={32} style={{ color: '#9ca3af' }} />
         </Overlay>
@@ -107,13 +98,13 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
           objectFit: 'contain',
           borderRadius: OVERLAY_BORDER_RADIUS,
           transition: 'opacity 500ms',
-          opacity: isLoaded ? 1 : 0,
+          opacity: phase === 'live' ? 1 : 0,
           minHeight: '120px',
           background: `linear-gradient(135deg, var(--overlay-dark) 0%, #374151 100%)`,
         }}
       />
 
-      {isLoaded && !hasError && (
+      {phase === 'live' && (
         <Flex
           position='absolute'
           align='center'

@@ -16,7 +16,7 @@ bun start                # vite dev on :9001 (override PORT / VITE_PORT)
 bun run build            # dist/widget.mjs + declarations
 bun run test             # bun test; filter with `bun test <pattern>`
 bun run bundle:check     # packaging gate (size, per-dependency budgets, single chunk, React external)
-bun run check:served     # asserts what the nginx runtime image actually sends, over real HTTP
+bun run check:served     # asserts what the nginx runtime image sends over real HTTP (needs docker or TARGET_URL)
 bun run code:check       # tsc + eslint + prettier --check
 bun run ci               # every CI gate — the pre-handoff gate
 bun run tag <version>    # release: bump, prove bun.lock, build, commit, annotated tag
@@ -57,7 +57,7 @@ GUI clients; that path is baked in at install, so after changing `rc:` re-run `l
   stay unpublished, and a new served file is added to the Dockerfile by hand. `.gz`/`.br` are precompressed
   at build by `scripts/precompress.ts`; nginx has no brotli module, so brotli rides a `try_files`.
 - **zod ships in the bundle, so untrusted input is parsed with the contract's own schemas** (rrweb events,
-  `parseWidgetSettings`), never a hand-written guard re-spelling a contract shape.
+  `parseWidgetSettingsOrThrow`), never a hand-written guard re-spelling a contract shape.
 - `public/loader.js` is the script-tag bootstrap. It injects its `esm.sh` React importmap **unless a host map
   already maps all four React specifiers** — Firefox and older Chrome/Safari ignore a second map. The build
   target (Safari 16.4 floor) is documented in README's Requirements.

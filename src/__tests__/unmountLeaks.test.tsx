@@ -16,7 +16,7 @@ import { showModeService } from '../services/ShowModeService';
 import { writeChatSnapshot } from '../services/StorageService';
 import { streamClient } from '../services/StreamClient';
 import * as WidgetService from '../services/WidgetService';
-import { credentialedConfig } from '../test/fixtures';
+import { $, credentialedConfig } from '../test/fixtures';
 import { renderWidget } from '../test/renderWidget';
 import { mocked, mockSdkModule, restoreModuleAfterAll } from '../test/vi-compat';
 
@@ -144,7 +144,7 @@ describe('component-tree unmount releases everything WidgetRoot registered on wi
     fireEvent.click(scope.getByRole('button', { name: /open/i }));
     fireEvent.click(await scope.findByRole('tab', { name: 'Chat' }));
 
-    const composer = result.container.querySelector('textarea') as HTMLTextAreaElement;
+    const composer = $('textarea', result.container);
     fireEvent.change(composer, { target: { value: 'hello from a leak test' } });
     fireEvent.keyDown(composer, { key: 'Enter' });
     await waitFor(() => expect(scope.getByText('hello from a leak test')).toBeInTheDocument());

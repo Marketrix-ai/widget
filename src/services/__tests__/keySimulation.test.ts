@@ -4,6 +4,7 @@
 
 import { afterEach, describe, expect, it } from 'bun:test';
 
+import { $ } from '../../test/fixtures';
 import { resetDom } from '../../test/preload';
 import { simulateKeyAction } from '../keySimulation';
 
@@ -45,7 +46,7 @@ describe('simulateKeyAction Tab', () => {
 describe('simulateKeyAction Backspace/Delete', () => {
   const input = (value: string, start: number, end = start) => {
     document.body.innerHTML = '<input />';
-    const el = document.querySelector('input') as HTMLInputElement;
+    const el = $('input');
     el.value = value;
     el.setSelectionRange(start, end);
     return el;
@@ -113,7 +114,7 @@ describe('simulateKeyAction Backspace/Delete', () => {
 describe('simulateKeyAction ArrowDown/ArrowUp on a select', () => {
   const select = (options: string[], selectedIndex: number) => {
     document.body.innerHTML = `<select>${options.map(o => `<option>${o}</option>`).join('')}</select>`;
-    const el = document.querySelector('select') as HTMLSelectElement;
+    const el = $('select');
     el.selectedIndex = selectedIndex;
     return el;
   };

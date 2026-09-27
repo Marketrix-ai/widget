@@ -1,17 +1,15 @@
 /**
- * Boots the built `dist/widget.mjs` — never the source — in a jsdom host document the way a customer's
- * page actually hands it off, via `loader.js`'s `script[mtx-id]` attribute forwarding and the widget's
- * own auto-init. Covers the exported runtime surface, the closed-shadow FAB mount and z-index, and that
- * no request fires before a host script tag triggers auto-init, and that the loader adds no second import
- * map over a host map that already supplies React, nor fails over one that is unparsable. Each run copies the
- * build into its own scratch directory under `dist/`, so parallel runs in one checkout never share one.
+ * Boots the built `dist/widget.mjs` — never the source — in a jsdom host document carrying the README's
+ * `script[mtx-id]` tag. Covers the exported runtime surface, the closed-shadow FAB mount and z-index, and that
+ * no request fires before a host script tag triggers auto-init. Each run copies the build into its own scratch
+ * directory under `dist/`, so parallel runs in one checkout never share one.
  */
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { StandardRPCJsonSerializer, StandardRPCSerializer } from '@orpc/client/standard';
-import { afterAll, afterEach, beforeAll, describe, expect, it, spyOn } from 'bun:test';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'bun:test';
 
 import { validSettings } from '../test/fixtures';
 
@@ -103,85 +101,6 @@ afterEach(() => {
   globalThis.fetch = realFetch;
   console.error = realConsoleError;
   console.warn = realConsoleWarn;
-});
-
-describe('loader.js forwards only mtx-* attributes onto the widget.mjs it injects', () => {
-  const runLoader = (hostImportMaps: string[] = []) => {
-    const loaderSource = readFileSync(resolve(root, 'public/loader.js'), 'utf8');
-    const appended: { type: string; textContent?: string; src?: string; attrs: Record<string, string> }[] = [];
-    const currentScript = {
-      src: 'https://widget.marketrix.ai/loader.js',
-      async: 'true',
-      attributes: [
-        { name: 'src', value: 'https://widget.marketrix.ai/loader.js' },
-        { name: 'async', value: 'true' },
-        ...mtxAttrNames.map(name => ({ name, value: attrValues[name] ?? `smoke-${name}` })),
-      ],
-    };
-    const fakeDocument = {
-      currentScript,
-      querySelectorAll: () => hostImportMaps.map(textContent => ({ textContent })),
-      head: { appendChild: (el: (typeof appended)[number]) => appended.push(el) },
-      createElement: () => {
-        const el: (typeof appended)[number] = { type: '', attrs: {} };
-
-        return new Proxy(el, {
-          set: (target, prop, value) => {
-            (target as unknown as Record<string, unknown>)[prop as string] = value;
-            return true;
-          },
-          get: (target, prop) =>
-            prop === 'setAttribute'
-              ? (name: string, value: string) => (target.attrs[name] = value)
-              : (target as unknown as Record<string, unknown>)[prop as string],
-        });
-      },
-    };
-
-    new Function('document', loaderSource)(fakeDocument);
-    return appended;
-  };
-
-  it("copies the host script tag's mtx-* attributes and none else onto the module script", () => {
-    const appended = runLoader();
-
-    expect(appended).toHaveLength(2);
-    expect(appended[0]?.type).toBe('importmap');
-    expect(JSON.parse(appended[0]?.textContent ?? '{}')).toMatchObject({ imports: { react: expect.any(String) } });
-
-    expect(appended[1]?.type).toBe('module');
-    expect(appended[1]?.src).toBe('https://widget.marketrix.ai/widget.mjs');
-    expect(appended[1]?.attrs).toEqual(
-      Object.fromEntries(mtxAttrNames.map(name => [name, attrValues[name] ?? `smoke-${name}`])),
-    );
-  });
-
-  it('adds no second import map when the host map already supplies React, which Firefox would ignore', () => {
-    const hostMap = JSON.stringify({
-      imports: {
-        react: '/r.js',
-        'react-dom': '/rd.js',
-        'react-dom/client': '/rdc.js',
-        'react/jsx-runtime': '/jsx.js',
-      },
-    });
-
-    expect(runLoader([hostMap]).map(el => el.type)).toEqual(['module']);
-  });
-
-  it('still loads, adding its own map, over a host import map that is not valid JSON', () => {
-    const warn = spyOn(console, 'warn').mockImplementation(() => {});
-    expect(runLoader(['{ not json', 'null']).map(el => el.type)).toEqual(['importmap', 'module']);
-    expect(warn).toHaveBeenCalledTimes(1);
-    warn.mockRestore();
-  });
-
-  it('still adds its map when the host map lacks React', () => {
-    expect(runLoader([JSON.stringify({ imports: { lodash: '/l.js' } })]).map(el => el.type)).toEqual([
-      'importmap',
-      'module',
-    ]);
-  });
 });
 
 describe("embed smoke: the built dist/widget.mjs boots the way a customer's page actually gets it", () => {

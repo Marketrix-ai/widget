@@ -4,16 +4,10 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
-import { mockMediaStream } from '../../test/fixtures';
+import { liveMediaStream, mockMediaStream } from '../../test/fixtures';
 import { activeScreenStream, startScreenShare, stopScreenShare, subscribeScreenShare } from '../ScreenShareService';
 
 const getDisplayMedia = vi.fn();
-
-const liveStream = () =>
-  mockMediaStream({
-    getVideoTracks: () => [{ readyState: 'live', addEventListener: vi.fn() }],
-    getTracks: () => [{ stop: vi.fn() }],
-  });
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -27,7 +21,7 @@ afterEach(() => {
 
 describe('the screen-share store', () => {
   it('prompts once and returns the stream', async () => {
-    const stream = liveStream();
+    const stream = liveMediaStream();
     getDisplayMedia.mockResolvedValue(stream);
 
     await expect(startScreenShare()).resolves.toBe(stream);
@@ -35,7 +29,7 @@ describe('the screen-share store', () => {
   });
 
   it('shares one prompt between two overlapping calls before it resolves', async () => {
-    const stream = liveStream();
+    const stream = liveMediaStream();
     let resolvePrompt!: (stream: MediaStream) => void;
     getDisplayMedia.mockReturnValue(
       new Promise<MediaStream>(resolve => {

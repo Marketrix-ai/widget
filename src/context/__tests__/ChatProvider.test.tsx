@@ -16,7 +16,7 @@ import * as chatThread from '../../services/chatThread';
 import { claimTabId, remintTabId } from '../../services/StorageService';
 import { streamClient } from '../../services/StreamClient';
 import { agentMessage, asStreamClientInternals, ofKind } from '../../test/fixtures';
-import { ChatHarness } from '../../test/renderWidget';
+import { ChatHarness, renderChatHarness } from '../../test/renderWidget';
 import { advanceTimersByTimeAsync, waitFor } from '../../test/vi-compat';
 import { isPending, messageText } from '../../utils/chat';
 import * as log from '../../utils/log';
@@ -168,26 +168,41 @@ describe('a retransmitted tool/call', () => {
     await waitFor(() => expect(mockExecuteTool).toHaveBeenCalledTimes(1));
     expect(mockExecuteTool).toHaveBeenCalledTimes(1);
   });
-});
 
-let captured: ReturnType<typeof useChatContext> | undefined;
-const Capture = () => {
-  captured = useChatContext();
-  return null;
-};
+  it('never runs once the visitor stopped the task', async () => {
+    mockExecuteTool.mockClear();
+    render(
+      <ChatHarness previewMode={false}>
+        <ErrorProbe />
+      </ChatHarness>,
+    );
+
+    await act(async () => {
+      screen.getByTestId('stop').click();
+      asStreamClientInternals().handleMessage({
+        type: 'tool/call',
+        tool_call_id: 'tc-after-stop',
+        browser_tool: 'click_element',
+        args: { index: 1 },
+        mode: 'do',
+        explanation: 'Click it',
+      });
+      await advanceTimersByTimeAsync(0);
+    });
+
+    expect(mockExecuteTool).not.toHaveBeenCalled();
+  });
+});
 
 let providerCommitCount = 0;
 const countProviderCommit = () => providerCommitCount++;
 
-const renderCaptured = (previewMode = true) => {
-  render(
+const renderCaptured = (previewMode = true) =>
+  renderChatHarness({ previewMode }, ui => (
     <Profiler id='provider' onRender={countProviderCommit}>
-      <ChatHarness previewMode={previewMode}>
-        <Capture />
-      </ChatHarness>
-    </Profiler>,
-  );
-};
+      {ui}
+    </Profiler>
+  ));
 
 async function dispatchClickToolCall(toolCallId: string): Promise<void> {
   await act(async () => {
@@ -215,71 +230,71 @@ async function sentPayloadFor<T extends unknown[]>(
 
 describe('commit skips the render for a transition that reports no change', () => {
   it('a stale-reply watchdog firing on a message parked waiting-for-user does not re-render', async () => {
-    renderCaptured(false);
+    const chat = renderCaptured(false);
 
     await act(async () => {
-      await captured!.chatActions.sendTurn('do the thing', 'tell');
+      await chat().chatActions.sendTurn('do the thing', 'tell');
     });
-    const placeholderId = captured!.messages[captured!.messages.length - 1]?.id as string;
+    const placeholderId = chat().messages[chat().messages.length - 1]?.id as string;
 
     act(() => {
       asStreamClientInternals().handleMessage({ type: 'task/status', status: 'has_question' });
     });
     expect(
       ofKind(
-        captured!.messages.find(m => m.id === placeholderId),
+        chat().messages.find(m => m.id === placeholderId),
         'agent',
       ).status,
     ).toBe('question');
 
-    const messagesBeforeWatchdog = captured!.messages;
+    const messagesBeforeWatchdog = chat().messages;
     act(() => {
       vi.advanceTimersByTime(120_000);
     });
 
-    expect(captured!.messages).toBe(messagesBeforeWatchdog);
+    expect(chat().messages).toBe(messagesBeforeWatchdog);
     expect(
       ofKind(
-        captured!.messages.find(m => m.id === placeholderId),
+        chat().messages.find(m => m.id === placeholderId),
         'agent',
       ).status,
     ).toBe('question');
   });
 
   it('setMessages handed its own current array back is a no-op, even though it builds a new state object', () => {
-    renderCaptured();
+    const chat = renderCaptured();
     act(() => {
-      captured!.chatActions.restoreMessages([agentMessage({ id: 'a', mode: 'tell', parts: [] })]);
+      chat().chatActions.restoreMessages([agentMessage({ id: 'a', mode: 'tell', parts: [] })]);
     });
 
-    const messagesBefore = captured!.messages;
+    const messagesBefore = chat().messages;
     const rendersBefore = providerCommitCount;
     act(() => {
-      captured!.chatActions.restoreMessages(messagesBefore);
+      chat().chatActions.restoreMessages(messagesBefore);
     });
 
     expect(providerCommitCount).toBe(rendersBefore);
-    expect(captured!.messages).toBe(messagesBefore);
+    expect(chat().messages).toBe(messagesBefore);
   });
 });
 
 describe('a turn in preview mode', () => {
   it('echoes the user message and answers locally, without dialing the stream', async () => {
-    renderCaptured(true);
+    const chat = renderCaptured(true);
     const ready = vi.spyOn(streamClient, 'ready');
 
     await act(async () => {
-      await captured!.chatActions.sendTurn('hello', 'tell');
+      await chat().chatActions.sendTurn('hello', 'tell');
     });
 
     expect(ready).not.toHaveBeenCalled();
-    expect(captured!.messages.map(m => m.kind)).toEqual(['user', 'agent']);
+    expect(chat().messages.map(m => m.kind)).toEqual(['user', 'agent']);
   });
 });
 
 describe('a real turn', () => {
   it('posts the mode-prefixed command under its placeholder id once the stream is ready', async () => {
-    renderCaptured(false);
+    const chat = renderCaptured(false);
     const order: string[] = [];
     vi.spyOn(chatThread, 'getOrCreateChatId').mockResolvedValue('chat-1');
     vi.spyOn(streamClient, 'ready').mockImplementation(async () => {
@@ -290,10 +305,10 @@ describe('a real turn', () => {
     });
 
     await act(async () => {
-      await captured!.chatActions.sendTurn('hello', 'tell');
+      await chat().chatActions.sendTurn('hello', 'tell');
     });
 
-    const placeholder = captured!.messages.find(isPending);
+    const placeholder = chat().messages.find(isPending);
     expect(order).toEqual(['ready', 'send']);
     expect(send).toHaveBeenCalledWith({ type: 'chat/tell', request_id: placeholder!.id, content: 'hello' });
   });
@@ -301,31 +316,27 @@ describe('a real turn', () => {
 
 describe('a Show or Do turn without a live screen share', () => {
   it('holds the turn behind a screen-access request, and a denial releases it', async () => {
-    renderCaptured(true);
+    const chat = renderCaptured(true);
 
     await act(async () => {
-      await captured!.chatActions.sendTurn('show me', 'show');
+      await chat().chatActions.sendTurn('show me', 'show');
     });
-    expect(captured!.messages.map(m => m.kind)).toEqual(['user', 'screenAccess']);
+    expect(chat().messages.map(m => m.kind)).toEqual(['user', 'screenAccess']);
 
-    act(() => captured!.chatActions.denyScreenAccess());
+    act(() => chat().chatActions.denyScreenAccess());
 
-    expect(ofKind(captured!.messages[1], 'screenAccess').screenShareStatus).toBe('denied');
-    expect(captured!.messages.map(m => m.kind)).toEqual(['user', 'screenAccess', 'agent']);
+    expect(ofKind(chat().messages[1], 'screenAccess').screenShareStatus).toBe('denied');
+    expect(chat().messages.map(m => m.kind)).toEqual(['user', 'screenAccess', 'agent']);
   });
 
   it('asks nothing when the tenant turned screen sharing off', async () => {
-    render(
-      <ChatHarness overrides={{ use_screenshare: false }}>
-        <Capture />
-      </ChatHarness>,
-    );
+    const chat = renderChatHarness({ overrides: { use_screenshare: false } });
 
     await act(async () => {
-      await captured!.chatActions.sendTurn('do it', 'do');
+      await chat().chatActions.sendTurn('do it', 'do');
     });
 
-    expect(captured!.messages.map(m => m.kind)).toEqual(['user', 'agent']);
+    expect(chat().messages.map(m => m.kind)).toEqual(['user', 'agent']);
   });
 });
 
@@ -335,7 +346,7 @@ describe('the finish tool ends the task only when it did not fail', () => {
   });
 
   it('completes the task on a successful finish', async () => {
-    renderCaptured(false);
+    const chat = renderCaptured(false);
     mockExecuteTool.mockReset().mockResolvedValue({ success: true, result: { text: 'done' } });
 
     await act(async () => {
@@ -351,11 +362,11 @@ describe('the finish tool ends the task only when it did not fail', () => {
     });
 
     await waitFor(() => expect(mockExecuteTool).toHaveBeenCalled());
-    await waitFor(() => expect(captured!.taskState.phase).toBe('idle'));
+    await waitFor(() => expect(chat().taskState.phase).toBe('idle'));
   });
 
   it('leaves the task running on a failed finish, rather than ending it', async () => {
-    renderCaptured(false);
+    const chat = renderCaptured(false);
     mockExecuteTool.mockReset().mockResolvedValue({ success: false, error: 'boom' });
 
     await act(async () => {
@@ -371,7 +382,7 @@ describe('the finish tool ends the task only when it did not fail', () => {
     });
 
     await waitFor(() => expect(mockExecuteTool).toHaveBeenCalled());
-    expect(captured!.taskState.phase).toBe('running');
+    expect(chat().taskState.phase).toBe('running');
   });
 });
 
@@ -450,8 +461,8 @@ describe('a tool/call an earlier page load of this tab already started', () => {
 describe('a chat/error event is logged, not surfaced as a transcript message', () => {
   it('logs the server error and leaves the transcript untouched', async () => {
     const logWarn = vi.spyOn(log, 'logWarn').mockImplementation(() => {});
-    renderCaptured(false);
-    const messagesBefore = captured!.messages;
+    const chat = renderCaptured(false);
+    const messagesBefore = chat().messages;
 
     act(() => {
       asStreamClientInternals().handleMessage({
@@ -462,7 +473,7 @@ describe('a chat/error event is logged, not surfaced as a transcript message', (
     });
 
     expect(logWarn).toHaveBeenCalledWith('[Widget] Chat error from server:', 'upstream exploded');
-    expect(captured!.messages).toEqual(messagesBefore);
+    expect(chat().messages).toEqual(messagesBefore);
   });
 });
 
@@ -529,24 +540,24 @@ describe('a transient stream failure banner clears once the stream recovers', ()
 
 describe('two independent turns settle into their own messages', () => {
   it("never mixes one request_id's reply into another's message", async () => {
-    renderCaptured(false);
+    const chat = renderCaptured(false);
 
     act(() => {
-      captured!.chatActions.restoreMessages([agentMessage({ id: 'req-a', parts: [] })]);
+      chat().chatActions.restoreMessages([agentMessage({ id: 'req-a', parts: [] })]);
     });
     act(() => {
       asStreamClientInternals().handleMessage({ type: 'chat/response', request_id: 'req-a', text: 'first' });
     });
 
     act(() => {
-      captured!.chatActions.restoreMessages([...captured!.messages, agentMessage({ id: 'req-b', parts: [] })]);
+      chat().chatActions.restoreMessages([...chat().messages, agentMessage({ id: 'req-b', parts: [] })]);
     });
     act(() => {
       asStreamClientInternals().handleMessage({ type: 'chat/response', request_id: 'req-b', text: 'second' });
     });
 
-    const first = captured!.messages.find(msg => msg.id === 'req-a');
-    const second = captured!.messages.find(msg => msg.id === 'req-b');
+    const first = chat().messages.find(msg => msg.id === 'req-a');
+    const second = chat().messages.find(msg => msg.id === 'req-b');
     expect(messageText(first!.parts)).toBe('first');
     expect(messageText(second!.parts)).toBe('second');
   });

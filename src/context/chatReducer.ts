@@ -1,6 +1,6 @@
 /**
  * Pure state machine behind `ChatContext`: folds incoming stream events and local transitions into
- * `{messages, task}` and returns the tool runs the caller must perform. No I/O, no React.
+ * `{messages, task}`. No I/O, no React.
  * `reduceDispatch` opens a new turn; the tool, text, error, transport-failure, stale-reply and screen-share
  * reducers each settle or patch the running message and task.
  * The agent repeats its `done` message in the terminal `task/status`, and the api follows a failed status with
@@ -10,14 +10,11 @@ import type { WidgetEvent } from '../sdk';
 import type { WidgetToolCall, WidgetToolName } from '../services/browserTools';
 import type { AgentMessage, ChatMessage, InstructionType, MessagePart } from '../types';
 import {
-  addProgressLine,
   CHAT_FAILURE_TEXT,
   createScreenshareMessage,
   createSystemMessage,
   findMessageForProgress,
   isPending,
-  markProgressLineComplete,
-  markProgressLineFailed,
   messageText,
   SCREEN_SHARE_STARTED_TEXT,
   SCREEN_SHARE_STOPPED_TEXT,
@@ -33,13 +30,6 @@ export interface ChatState {
   task: TaskState;
 }
 
-interface ReduceResult {
-  state: ChatState;
-  toolRuns: WidgetToolCall[];
-}
-
-const withoutToolRuns = (state: ChatState): ReduceResult => ({ state, toolRuns: [] });
-
 export type ToolProgress =
   | { status: 'in_progress'; mode: WidgetToolCall['mode']; explanation?: string | undefined }
   | { status: 'completed' }
@@ -47,6 +37,30 @@ export type ToolProgress =
 
 const runningMode = (state: ChatState, currentMode: InstructionType): InstructionType =>
   state.task.phase === 'running' ? state.task.mode : currentMode;
+
+function applyToolProgress(msg: AgentMessage, tool: WidgetToolName, progress: ToolProgress): AgentMessage {
+  const index = msg.parts.findIndex(
+    part => part.type === 'progress' && part.status === 'in_progress' && part.browserToolName === tool,
+  );
+  const open = msg.parts[index];
+  const parts = [...msg.parts];
+  if (open?.type !== 'progress') {
+    if (progress.status !== 'in_progress') return msg;
+    const content = toolExplanation(tool, progress.explanation);
+    parts.push({ type: 'progress', content, status: 'in_progress', browserToolName: tool });
+  } else if (progress.status === 'in_progress') {
+    parts[index] = { ...open, content: toolExplanation(tool, progress.explanation) };
+  } else if (progress.status === 'completed') {
+    parts[index] = { ...open, status: 'completed' };
+  } else {
+    parts[index] = {
+      ...open,
+      status: 'failed',
+      content: progress.error ? `${open.content} (${progress.error})` : open.content,
+    };
+  }
+  return { ...msg, parts };
+}
 
 export function reduceToolProgress(
   state: ChatState,
@@ -60,13 +74,8 @@ export function reduceToolProgress(
   if (!found) return state;
 
   let updatedMsg = found.message;
-  if (progress.status === 'failed') {
-    updatedMsg = markProgressLineFailed(updatedMsg, browserToolName, progress.error);
-  } else if (browserToolName !== 'done') {
-    updatedMsg =
-      progress.status === 'in_progress'
-        ? addProgressLine(updatedMsg, browserToolName, toolExplanation(browserToolName, progress.explanation))
-        : markProgressLineComplete(updatedMsg, browserToolName);
+  if (progress.status === 'failed' || browserToolName !== 'done') {
+    updatedMsg = applyToolProgress(updatedMsg, browserToolName, progress);
   }
 
   if (isTaskRunning && isPending(updatedMsg)) {
@@ -197,50 +206,44 @@ export function reduceStaleReply(state: ChatState, messageId: string, text: stri
   return pending?.kind === 'agent' && pending.status === 'thinking' ? reduceError(state, messageId, text) : state;
 }
 
-export function reduceEvent(state: ChatState, event: WidgetEvent, currentMode: InstructionType): ReduceResult {
+export function reduceEvent(state: ChatState, event: WidgetEvent, currentMode: InstructionType): ChatState {
   switch (event.type) {
     case 'tool/call': {
-      if (state.task.phase === 'stopped') return withoutToolRuns(state);
+      if (state.task.phase === 'stopped') return state;
       const task = state.task.phase === 'running' ? state.task : { phase: 'running' as const, mode: event.mode };
-      const progressed = reduceToolProgress(
+      return reduceToolProgress(
         { ...state, task },
         event.browser_tool,
         { status: 'in_progress', mode: event.mode, explanation: event.explanation },
         currentMode,
       );
-      return { state: progressed, toolRuns: [event] };
     }
 
     case 'task/status': {
-      if (event.status === 'running') return withoutToolRuns(state);
+      if (event.status === 'running') return state;
       const last = state.messages.findLast((msg): msg is AgentMessage => msg.kind === 'agent');
       if (last && taskEnded(last)) {
         const closing = event.message;
-        if (!closing || messageText(last.parts)) return withoutToolRuns(state);
-        return withoutToolRuns({
-          ...state,
-          messages: state.messages.map(msg => (msg === last ? appendText(last, closing) : msg)),
-        });
+        if (!closing || messageText(last.parts)) return state;
+        return { ...state, messages: state.messages.map(msg => (msg === last ? appendText(last, closing) : msg)) };
       }
       const { status, message } = event;
-      return withoutToolRuns(
-        stampProgressMessage(state, currentMode, msg => ({
-          ...(message ? appendText(msg, message) : msg),
-          status: TASK_STATUS[status],
-        })),
-      );
+      return stampProgressMessage(state, currentMode, msg => ({
+        ...(message ? appendText(msg, message) : msg),
+        status: TASK_STATUS[status],
+      }));
     }
 
     case 'chat/delta':
-      return withoutToolRuns(reduceText(state, event.request_id, event.text, true));
+      return reduceText(state, event.request_id, event.text, true);
 
     case 'chat/response':
-      return withoutToolRuns(reduceText(state, event.request_id, event.text, false));
+      return reduceText(state, event.request_id, event.text, false);
 
     case 'chat/error':
-      return withoutToolRuns(reduceError(state, event.request_id, CHAT_FAILURE_TEXT));
+      return reduceError(state, event.request_id, CHAT_FAILURE_TEXT);
 
     default:
-      return withoutToolRuns(state);
+      return state;
   }
 }

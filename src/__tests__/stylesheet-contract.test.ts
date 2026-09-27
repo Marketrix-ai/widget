@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'bun:test';
 
-import { resolveLayoutStyle } from '../components/base/layoutProps';
+import { splitLayout } from '../components/base/layoutProps';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const css = readFileSync(resolve(here, '../index.css'), 'utf8');
@@ -29,8 +29,8 @@ const componentSources = sourceFiles(resolve(here, '../components')).map(file =>
 
 describe('every animation resolves to a keyframe this stylesheet defines', () => {
   it.each(['fadeIn'] as const)('layout prop animate: %s', token => {
-    const name = String(resolveLayoutStyle({ animate: token }).animation).split(' ')[0];
-    expect(definedKeyframes, `resolveLayoutStyle emits ${name}, which index.css never defines`).toContain(name);
+    const name = String(splitLayout({ animate: token })[0].animation).split(' ')[0];
+    expect(definedKeyframes, `splitLayout emits ${name}, which index.css never defines`).toContain(name);
   });
 
   it('every animation named in a CSS rule is defined in the same file', () => {

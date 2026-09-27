@@ -1,13 +1,13 @@
 /**
  * Turns what a host page supplies into the fully-populated widget config the runtime reads.
- * `parseWidgetSettings` validates settings against the contract schema, `invalidSettingsMessage` names the
- * offending fields, and `loadWidgetConfig` looks a widget up by `mtxId`/`mtxKey` and merges its settings in.
+ * `parseWidgetSettingsOrThrow` validates settings against the contract schema, throwing with the offending
+ * fields named, and `loadWidgetConfig` looks a widget up by `mtxId`/`mtxKey` and merges its settings in.
  * Unknown settings keys are ignored, since the api may ship a new setting before this published bundle
  * knows it. `widgetPublicSearch` returns only live widgets, so a returned row is active.
  */
 import { z } from 'zod';
 
-import { type ApplicationWidgetPublicData, sdk } from '../sdk';
+import { type ApplicationWidgetPublicData, getSdk } from '../sdk';
 import { WidgetSettingsWriteSchema } from '../sdk/contracts/widgetSettings';
 import type { MarketrixConfig, ValidWidgetConfig } from '../types';
 import { errorMessage } from '../utils/errors';
@@ -18,24 +18,19 @@ export type WidgetRenderedSettings = z.infer<typeof RenderedSettingsSchema>;
 
 export type CredentialedConfig = ValidWidgetConfig & { mtxId: string; mtxKey: string };
 
-type WidgetSettingsResult =
-  { settings: WidgetRenderedSettings; invalidFields?: undefined } | { settings?: undefined; invalidFields: string[] };
-
-export function parseWidgetSettings(value: unknown): WidgetSettingsResult {
+export function parseWidgetSettingsOrThrow(value: unknown): WidgetRenderedSettings {
   const parsed = RenderedSettingsSchema.safeParse(value);
-  if (parsed.success) return { settings: parsed.data };
-  return { invalidFields: [...new Set(parsed.error.issues.map(issue => String(issue.path[0] ?? 'settings')))] };
+  if (parsed.success) return parsed.data;
+  const invalidFields = new Set(parsed.error.issues.map(issue => String(issue.path[0] ?? 'settings')));
+  throw new Error(`Widget settings are invalid: ${[...invalidFields].join(', ')}`);
 }
-
-export const invalidSettingsMessage = (invalidFields: string[]): string =>
-  `Widget settings are invalid: ${invalidFields.join(', ')}`;
 
 const widgetLookupCache = new Map<string, Promise<WidgetRenderedSettings>>();
 
 async function resolveActiveWidget(mtxId: string, mtxKey: string, mtxApiHost: string): Promise<WidgetRenderedSettings> {
   let widgets: ApplicationWidgetPublicData[];
   try {
-    ({ items: widgets } = await sdk.widgetPublicSearch({ marketrix_id: mtxId, marketrix_key: mtxKey }));
+    ({ items: widgets } = await getSdk().widgetPublicSearch({ marketrix_id: mtxId, marketrix_key: mtxKey }));
   } catch (error) {
     const message = errorMessage(error);
     const unreachable = ['Failed to fetch', 'ERR_CONNECTION_REFUSED', 'NetworkError', 'Network request failed'].some(
@@ -54,12 +49,7 @@ async function resolveActiveWidget(mtxId: string, mtxKey: string, mtxApiHost: st
     throw new Error('Widget not found or invalid credentials');
   }
 
-  const parsedSettings = parseWidgetSettings(activeWidget.widget_settings);
-  if (parsedSettings.invalidFields) {
-    throw new Error(invalidSettingsMessage(parsedSettings.invalidFields));
-  }
-
-  return parsedSettings.settings;
+  return parseWidgetSettingsOrThrow(activeWidget.widget_settings);
 }
 
 export async function loadWidgetConfig(config: MarketrixConfig): Promise<CredentialedConfig> {

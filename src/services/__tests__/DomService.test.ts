@@ -9,6 +9,7 @@
  */
 import { beforeEach, describe, expect, it } from 'bun:test';
 
+import { $, stubRect } from '../../test/fixtures';
 import { domService } from '../DomService';
 
 const interactable = (html: string): typeof domService => {
@@ -18,7 +19,7 @@ const interactable = (html: string): typeof domService => {
 };
 
 beforeEach(() => {
-  Element.prototype.getBoundingClientRect = () => ({ top: 0, left: 0, width: 10, height: 10 }) as DOMRect;
+  stubRect();
   document.elementFromPoint = () => null;
 });
 
@@ -138,8 +139,8 @@ describe('a control the visitor could not operate is refused at act time, not hi
 describe('re-scanning an unchanged page is idempotent', () => {
   it('assigns the same node the same index across repeated scans, never two ids to one node', () => {
     document.body.innerHTML = '<button style="position: fixed">A</button><a href="/b" style="position: fixed">B</a>';
-    const a = document.querySelector('button') as HTMLElement;
-    const b = document.querySelector('a') as HTMLElement;
+    const a = $('button');
+    const b = $('a');
 
     domService.reindexAndSnapshot();
     const firstScan = [domService.getValidatedElement(0).element, domService.getValidatedElement(1).element];
@@ -153,7 +154,7 @@ describe('re-scanning an unchanged page is idempotent', () => {
 
   it('drops a stale index for a node removed before the re-scan', () => {
     document.body.innerHTML = '<button style="position: fixed">A</button>';
-    const button = document.querySelector('button') as HTMLElement;
+    const button = $('button');
     domService.reindexAndSnapshot();
     expect(domService.getValidatedElement(0).element).toBe(button);
 

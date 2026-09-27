@@ -1,21 +1,16 @@
 /**
- * Browser-local persistence for the widget: the one door to `localStorage` and `sessionStorage`.
- * `readLocalParsed`/`writeLocal` read through a schema and write JSON, `scopedKey`/`scopeStorageTo` scope keys
- * per tenant, `getChatId`/`setChatId`/`forgetChatId` hold the thread id, `readChatSnapshot`/`writeChatSnapshot`
- * the transcript, `claimTabId` the browser tab's identity, and `StoredMessage` types a chat message. Config
- * and credentials are never persisted, and a host page that denies storage falls back to memory.
- * The tab id survives same-origin navigations and reloads so the api keeps routing a Show/Do task's tool
- * calls to this tab; a page takes it out of `sessionStorage` while alive, so a duplicated tab mints its own, and
- * `remintTabId` gives a page a fresh one when a tab duplicated mid-navigation still copied the id.
- * `claimToolCall` records each started tool call per tab, so a call the api resends after a navigating step
- * reloaded the page is answered `page_reloaded` rather than run twice.
+ * The widget's one door to `localStorage` and `sessionStorage`: schema-checked reads, tenant-scoped keys, the
+ * chat id and transcript snapshot, the tab id and started tool calls. Config and credentials are never
+ * persisted, and a host page that denies storage falls back to memory. The tab id survives same-origin
+ * navigations so the api keeps routing a Show/Do task's tool calls to this tab, and `claimToolCall` answers a
+ * call resent after a reload `page_reloaded` rather than running it twice.
  */
 import { z } from 'zod';
 
 import { InstructionTypeSchema } from '../sdk/contracts/widgetSettings';
 import { WIDGET_TOOL_NAMES } from '../sdk/contracts/widgetToolNames';
 import type { ChatMessage, InstructionType, ValidWidgetConfig } from '../types';
-import { SCREEN_SHARE_STOPPED_TEXT } from '../utils/chat';
+import { ENDED_STATUSES, PENDING_STATUSES, SCREEN_SHARE_STOPPED_TEXT } from '../utils/chat';
 import { logWarn } from '../utils/log';
 import { randomId } from '../utils/randomId';
 
@@ -43,7 +38,7 @@ const MessageSchema = z.discriminatedUnion('kind', [
     ...MessageBase,
     kind: z.literal('agent'),
     mode: InstructionTypeSchema.optional(),
-    status: z.enum(['thinking', 'waiting-for-user', 'question', 'done', 'failed', 'stopped']).optional(),
+    status: z.enum([...PENDING_STATUSES, 'question', ...ENDED_STATUSES]).optional(),
   }),
   z.object({ ...MessageBase, kind: z.literal('system') }),
   z.object({

@@ -3,9 +3,8 @@
  *
  * Bans bare `document.activeElement` (`useFocusTrap`/jsdom tests exempted), the bare `localStorage` and
  * `sessionStorage` globals (confined to `StorageService.ts`), a `cn()` helper call (no CSS framework), and every
- * `console.*` call except `error` everywhere and `warn` in `src/utils/log.ts` alone. `react-hooks`
- * enforces the rules of hooks; `jsx-a11y` covers interactive-div a11y. `Bun` is a global for `bun run`
- * scripts.
+ * `console.*` call except `error` everywhere and `warn` in `src/utils/log.ts` alone. `no-undef` is off because
+ * tsc already resolves every name.
  */
 
 import js from '@eslint/js';
@@ -33,47 +32,6 @@ export default [
           jsx: true,
         },
       },
-      globals: {
-        console: 'readonly',
-        Bun: 'readonly',
-        alert: 'readonly',
-        confirm: 'readonly',
-        window: 'readonly',
-        document: 'readonly',
-        navigator: 'readonly',
-        process: 'readonly',
-        fetch: 'readonly',
-        FormData: 'readonly',
-        File: 'readonly',
-        URL: 'readonly',
-        URLSearchParams: 'readonly',
-        localStorage: 'readonly',
-        sessionStorage: 'readonly',
-        setTimeout: 'readonly',
-        clearTimeout: 'readonly',
-        setInterval: 'readonly',
-        clearInterval: 'readonly',
-        requestAnimationFrame: 'readonly',
-        cancelAnimationFrame: 'readonly',
-        Buffer: 'readonly',
-        React: 'readonly',
-        JSX: 'readonly',
-        HTMLDivElement: 'readonly',
-        HTMLInputElement: 'readonly',
-        MouseEvent: 'readonly',
-        Element: 'readonly',
-        EventTarget: 'readonly',
-        describe: 'readonly',
-        it: 'readonly',
-        test: 'readonly',
-        expect: 'readonly',
-        vi: 'readonly',
-        beforeEach: 'readonly',
-        afterEach: 'readonly',
-        beforeAll: 'readonly',
-        afterAll: 'readonly',
-        require: 'readonly',
-      },
     },
     plugins: {
       '@typescript-eslint': typescript,
@@ -84,6 +42,7 @@ export default [
       'unused-imports': unusedImports,
     },
     rules: {
+      'no-undef': 'off',
       'no-restricted-properties': [
         'error',
         {
@@ -102,7 +61,7 @@ export default [
         'error',
         {
           selector: "CallExpression[callee.name='cn']",
-          message: 'no CSS-framework cn() helper in this codebase — resolveLayoutStyle/inline styles only',
+          message: 'no CSS-framework cn() helper in this codebase — splitLayout/inline styles only',
         },
       ],
       'react-hooks/rules-of-hooks': 'error',
@@ -114,7 +73,7 @@ export default [
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
-      '@typescript-eslint/no-non-null-assertion': 'warn',
+      '@typescript-eslint/no-non-null-assertion': 'error',
       '@typescript-eslint/no-require-imports': 'error',
       '@typescript-eslint/consistent-type-imports': [
         'error',
@@ -150,23 +109,11 @@ export default [
       ],
 
       'no-debugger': 'error',
-      'no-duplicate-imports': 'error',
       'no-unused-vars': 'off',
       'prefer-const': 'error',
       'no-var': 'error',
       'object-shorthand': 'error',
       'prefer-template': 'error',
-      'spaced-comment': ['error', 'always', { markers: ['/'] }],
-      'max-len': [
-        'warn',
-        {
-          code: 120,
-          ignoreUrls: true,
-          ignoreStrings: true,
-          ignoreTemplateLiterals: true,
-          ignoreRegExpLiterals: true,
-        },
-      ],
     },
   },
   prettierConfig,
@@ -181,13 +128,6 @@ export default [
     rules: {
       'no-restricted-globals': 'off',
       'no-console': 'off',
-      'no-restricted-syntax': [
-        'error',
-        {
-          selector: "CallExpression[callee.name='cn']",
-          message: 'no CSS-framework cn() helper in this codebase — resolveLayoutStyle/inline styles only',
-        },
-      ],
     },
   },
   {

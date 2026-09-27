@@ -5,7 +5,7 @@
  * marks a stream that exhausted its reconnects. Backoff is jittered so tabs across a shared outage don't
  * redial together, and a tab evicted by another page with its tab id redials under a fresh one.
  */
-import { sdk, type WidgetCommand, type WidgetEvent } from '../sdk';
+import { getSdk, type WidgetClient, type WidgetCommand, type WidgetEvent } from '../sdk';
 import { logWarn } from '../utils/log';
 import { claimTabId, remintTabId } from './StorageService';
 
@@ -18,7 +18,7 @@ const CREDENTIALS_REJECTED = 'Chat is unavailable — the widget credentials wer
 
 export class StreamGaveUpError extends Error {}
 
-type StreamCredentials = Pick<Parameters<typeof sdk.widgetStream>[0], 'marketrix_id' | 'marketrix_key'>;
+type StreamCredentials = Pick<Parameters<WidgetClient['widgetStream']>[0], 'marketrix_id' | 'marketrix_key'>;
 
 interface StreamRoute {
   chatId: string | null;
@@ -106,7 +106,10 @@ class StreamClient {
     const signal = this.abortController.signal;
 
     try {
-      const iterator = await sdk.widgetStream({ chat_id: chatId, tab_id: claimTabId(), ...credentials }, { signal });
+      const iterator = await getSdk().widgetStream(
+        { chat_id: chatId, tab_id: claimTabId(), ...credentials },
+        { signal },
+      );
 
       this.status = 'open';
 
@@ -168,7 +171,9 @@ class StreamClient {
     if (!chatId) {
       return Promise.reject(new Error('No active chat'));
     }
-    return sdk.widgetMessagePost({ chat_id: chatId, tab_id: tabId, command }).then(() => {});
+    return getSdk()
+      .widgetMessagePost({ chat_id: chatId, tab_id: tabId, command })
+      .then(() => {});
   }
 
   private notifyError(error: Error): void {

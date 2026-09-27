@@ -6,7 +6,14 @@
 import { eventIterator, oc } from '@orpc/contract';
 import { z } from 'zod';
 
-import { discriminatedUnionOfRecord, IdSchema, paginatedListOf, PaginationSchema, SuccessSchema } from './common';
+import {
+  ByApplicationIdSchema,
+  discriminatedUnionOfRecord,
+  IdSchema,
+  paginatedListOf,
+  PaginationSchema,
+  SuccessSchema,
+} from './common';
 import { RrwebEventSchema } from './rrweb';
 import { NonBlankStringSchema } from './schemaRules';
 import { SimulationStatusSchema } from './simulationStatus';
@@ -18,17 +25,11 @@ import {
 } from './widgetSettings';
 import { WIDGET_TOOL_NAMES } from './widgetToolNames';
 
-const WidgetCreateSchema = z.strictObject({
+const WidgetWriteSchema = z.strictObject({
   application_id: IdSchema,
   settings: WidgetSettingsWriteSchema.partial().optional(),
 });
-export type WidgetCreateData = z.infer<typeof WidgetCreateSchema>;
-
-const WidgetUpdateSchema = z.strictObject({
-  application_id: IdSchema,
-  settings: WidgetSettingsWriteSchema.partial().optional(),
-});
-export type WidgetUpdateData = z.infer<typeof WidgetUpdateSchema>;
+export type WidgetWriteData = z.infer<typeof WidgetWriteSchema>;
 
 const WidgetElementIndexSchema = z.number().int().nonnegative();
 const WidgetEmptyArgsSchema = z.strictObject({});
@@ -92,16 +93,7 @@ export const WidgetToolCallEventSchema = discriminatedUnionOfRecord('browser_too
 export const WidgetEventSchema = z.union([
   z.strictObject({ type: z.literal('registered'), chat_id: z.string() }),
   z.strictObject({ type: z.literal('heartbeat') }),
-  z.strictObject({
-    type: z.literal('chat/response'),
-    request_id: z.string(),
-    text: z.string(),
-  }),
-  z.strictObject({
-    type: z.literal('chat/delta'),
-    request_id: z.string(),
-    text: z.string(),
-  }),
+  z.strictObject({ type: z.literal(['chat/response', 'chat/delta']), request_id: z.string(), text: z.string() }),
   z.strictObject({
     type: z.literal('chat/error'),
     request_id: z.string(),
@@ -130,9 +122,11 @@ const WidgetToolResultSchema = z.union([
 export type WidgetToolResult = z.infer<typeof WidgetToolResultSchema>;
 
 export const WidgetCommandSchema = z.discriminatedUnion('type', [
-  z.strictObject({ type: z.literal('chat/tell'), request_id: z.string(), content: z.string() }),
-  z.strictObject({ type: z.literal('chat/show'), request_id: z.string(), content: z.string() }),
-  z.strictObject({ type: z.literal('chat/do'), request_id: z.string(), content: z.string() }),
+  z.strictObject({
+    type: z.literal(['chat/tell', 'chat/show', 'chat/do']),
+    request_id: z.string(),
+    content: z.string(),
+  }),
   z.strictObject({ type: z.literal('chat/stop') }),
   z.discriminatedUnion('success', [
     z.strictObject({
@@ -168,7 +162,7 @@ export const WidgetCommandSchema = z.discriminatedUnion('type', [
 ]);
 export type WidgetCommand = z.infer<typeof WidgetCommandSchema>;
 
-export const widgetCreate = oc.input(WidgetCreateSchema).output(ApplicationWidgetEntitySchema);
+export const widgetCreate = oc.input(WidgetWriteSchema).output(ApplicationWidgetEntitySchema);
 
 export const widgetSearch = oc
   .input(
@@ -191,11 +185,9 @@ export const widgetPublicSearch = oc
   )
   .output(paginatedListOf(ApplicationWidgetPublicSchema));
 
-export const widgetUpdate = oc.input(WidgetUpdateSchema).output(ApplicationWidgetEntitySchema);
+export const widgetUpdate = oc.input(WidgetWriteSchema).output(ApplicationWidgetEntitySchema);
 
-export const widgetDelete = oc
-  .input(z.strictObject({ application_id: IdSchema }))
-  .output(z.strictObject({ success: z.literal(true) }));
+export const widgetDelete = oc.input(ByApplicationIdSchema).output(SuccessSchema);
 
 export const widgetStream = oc
   .input(

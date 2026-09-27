@@ -1,6 +1,6 @@
 /**
- * Tests for the widget's entry paths: the classic loader preserves a host page's importmap and
- * injects the module script, a direct module script auto-initializes from its `mtx-*` attributes and
+ * Tests for the widget's entry paths: the classic loader adds its React import map only when the host's
+ * lacks one and injects the module script with the `mtx-*` attributes, a direct module script auto-initializes from its `mtx-*` attributes and
  * requires an API host, and every mounted widget gets its CSS inside the closed shadow root.
  */
 import { readFileSync } from 'node:fs';
@@ -21,6 +21,36 @@ const appendModuleScript = (attributes: Record<string, string>) => {
   script.src = 'https://cdn.test/widget.mjs';
   for (const [name, value] of Object.entries(attributes)) script.setAttribute(name, value);
   document.head.appendChild(script);
+};
+
+const MTX_ATTRS = {
+  'mtx-id': 'widget-id',
+  'mtx-key': 'widget-key',
+  'mtx-api-host': 'https://api.test',
+  'mtx-use-screenshare': 'false',
+};
+const ESM_REACT = {
+  react: 'https://esm.sh/react@19',
+  'react-dom': 'https://esm.sh/react-dom@19',
+  'react-dom/client': 'https://esm.sh/react-dom@19/client',
+  'react/jsx-runtime': 'https://esm.sh/react@19/jsx-runtime',
+};
+
+const runLoader = (...hostMaps: string[]): HTMLScriptElement[] => {
+  for (const textContent of hostMaps) {
+    const map = document.createElement('script');
+    map.type = 'importmap';
+    map.textContent = textContent;
+    document.head.appendChild(map);
+  }
+  const loader = document.createElement('script');
+  loader.src = 'https://cdn.test/widgets/loader.js';
+  loader.async = true;
+  for (const [name, value] of Object.entries(MTX_ATTRS)) loader.setAttribute(name, value);
+  document.head.appendChild(loader);
+  Object.defineProperty(document, 'currentScript', { configurable: true, get: () => loader });
+  Function(loaderSource)();
+  return [...document.head.querySelectorAll('script')].slice(hostMaps.length + 1);
 };
 
 const resetDocument = () => {
@@ -47,55 +77,27 @@ afterEach(() => {
 });
 
 describe('widget public entry paths', () => {
-  it('preserves host React mappings and injects the configured module from the classic loader', () => {
-    const importMap = document.createElement('script');
-    importMap.type = 'importmap';
-    importMap.textContent = JSON.stringify({ imports: { react: 'https://host.test/react.js', host: '/host.js' } });
-    document.head.appendChild(importMap);
+  it('keeps the host map, adds the React map it lacks, and forwards only mtx-* attributes to the module', () => {
+    const injected = runLoader(JSON.stringify({ imports: { react: 'https://host.test/react.js', host: '/host.js' } }));
 
-    const loader = document.createElement('script');
-    loader.src = 'https://cdn.test/widgets/loader.js';
-    loader.setAttribute('mtx-id', 'widget-id');
-    loader.setAttribute('mtx-key', 'widget-key');
-    loader.setAttribute('mtx-api-host', 'https://api.test');
-    loader.setAttribute('mtx-use-screenshare', 'false');
-    document.head.appendChild(loader);
-    Object.defineProperty(document, 'currentScript', { configurable: true, get: () => loader });
-
-    Function(loaderSource)();
-
-    const maps = [...document.querySelectorAll('script[type="importmap"]')].map(node =>
-      JSON.parse(node.textContent ?? '{}'),
-    );
-    expect(maps).toEqual([
-      { imports: { react: 'https://host.test/react.js', host: '/host.js' } },
-      {
-        imports: {
-          react: 'https://esm.sh/react@19',
-          'react-dom': 'https://esm.sh/react-dom@19',
-          'react-dom/client': 'https://esm.sh/react-dom@19/client',
-          'react/jsx-runtime': 'https://esm.sh/react@19/jsx-runtime',
-        },
-      },
-    ]);
-    const modules = document.querySelectorAll('script[type="module"]');
-    expect(modules).toHaveLength(1);
-    const scriptModule = modules[0];
-    if (!scriptModule) throw new Error('expected the loader to inject one module script');
-    expect(scriptModule).toMatchObject({ src: 'https://cdn.test/widgets/widget.mjs' });
-    expect(
-      Object.fromEntries(
-        ['mtx-id', 'mtx-key', 'mtx-api-host', 'mtx-use-screenshare'].map(name => [
-          name,
-          scriptModule.getAttribute(name),
-        ]),
-      ),
-    ).toEqual({
-      'mtx-id': 'widget-id',
-      'mtx-key': 'widget-key',
-      'mtx-api-host': 'https://api.test',
-      'mtx-use-screenshare': 'false',
+    expect(injected.map(node => node.type)).toEqual(['importmap', 'module']);
+    expect(JSON.parse(injected[0]?.textContent ?? '{}')).toEqual({ imports: ESM_REACT });
+    expect(Object.fromEntries([...(injected[1]?.attributes ?? [])].map(attr => [attr.name, attr.value]))).toEqual({
+      type: 'module',
+      src: 'https://cdn.test/widgets/widget.mjs',
+      ...MTX_ATTRS,
     });
+  });
+
+  it('adds no second import map when the host map already supplies React, which Firefox would ignore', () => {
+    expect(runLoader(JSON.stringify({ imports: ESM_REACT })).map(node => node.type)).toEqual(['module']);
+  });
+
+  it('still loads, adding its own map, over a host import map that is not valid JSON', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    expect(runLoader('{ not json', 'null').map(node => node.type)).toEqual(['importmap', 'module']);
+    expect(warn).toHaveBeenCalledTimes(1);
   });
 
   it('auto-initializes once from the direct module script attributes', async () => {

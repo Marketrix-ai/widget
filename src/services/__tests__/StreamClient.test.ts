@@ -6,7 +6,7 @@
  * the stream up, and that an evicted tab re-mints its id.
  */
 
-import { sdk, type WidgetEvent } from '../../sdk';
+import { getSdk, type WidgetClient, type WidgetEvent } from '../../sdk';
 import { flushMicrotasks } from '../../test/fixtures';
 import { advanceTimersByTimeAsync, mocked, mockSdkModule, restoreModuleAfterAll, waitFor } from '../../test/vi-compat';
 import { streamClient, StreamGaveUpError } from '../StreamClient';
@@ -16,7 +16,7 @@ type StreamClient = typeof streamClient;
 vi.mock('../../sdk', () => mockSdkModule({ widgetStream: vi.fn(), widgetMessagePost: vi.fn() }));
 restoreModuleAfterAll('../../sdk', () => import('../../sdk/index.ts?real'));
 
-const mockSdk = mocked(sdk);
+const mockSdk = mocked(getSdk());
 
 interface StreamClientInternals {
   chatId: StreamClient['chatId'];
@@ -33,7 +33,7 @@ function internals(client: StreamClient): StreamClientInternals {
   return client as unknown as StreamClientInternals;
 }
 
-type MockedStream = Awaited<ReturnType<typeof sdk.widgetStream>>;
+type MockedStream = Awaited<ReturnType<WidgetClient['widgetStream']>>;
 
 function asMockedStream(iterable: AsyncIterable<WidgetEvent>): MockedStream {
   return iterable as unknown as MockedStream;

@@ -1,12 +1,6 @@
 /**
- * Icon registry: the SVG path data behind every `<Icon name=... />`, plus the shapes `Icon.tsx` renders.
- *
- * `IconPath` is one `<path>`'s attributes; `IconData` pairs an icon's own `viewBox` with its paths, kept
- * per icon since source icons come from different grids. `stroked()` builds an outline path in
- * `currentColor`. `icons` is the registry itself and `IconName` its keys.
- *
- * Every entry here ships to every host page, since the bundle is a single chunk — a new icon is a
- * deliberate size cost, not a free addition.
+ * Icon registry: `icons` maps each `IconName` to its `viewBox` and `IconPath`s, and `stroked()` builds an outline
+ * path. Every entry ships to every host page in the single-chunk bundle, so a new icon is a deliberate size cost.
  */
 
 interface IconPath {

@@ -1,5 +1,5 @@
 /**
- * Pure helpers for the chat message list: formatting (mode label, timestamp, `messageText`), the tenant's
+ * Pure helpers for the chat message list: formatting (mode label and icon, timestamp, `messageText`), the tenant's
  * enabled modes, each browser tool's progress label (`toolExplanation`) and Show-mode wait (`waitsForUser`),
  * finding which message a progress event belongs to (`findMessageForProgress`, which logs rather than
  * guesses on no match), and the per-kind constructors that are the only way a `ChatMessage` is built.
@@ -7,20 +7,25 @@
  * visitor never sees a raw server error. Show and Do read and act on the page through the DOM whatever the
  * visitor answers, so declining screen access withholds only the view of their screen.
  */
+import type { IconName } from '../components/base/icons';
 import { InstructionTypeSchema } from '../sdk/contracts/widgetSettings';
 import type { WidgetToolName } from '../services/browserTools';
 import type {
   AgentMessage,
+  AgentStatus,
   ChatMessage,
   InstructionType,
   MessagePart,
-  ProgressPart,
   WidgetSettingsData,
 } from '../types';
 import { logWarn } from './log';
 import { randomId } from './randomId';
 
-export const MODE_LABELS: Record<InstructionType, string> = { show: 'Show', tell: 'Tell', do: 'Do' };
+export const MODES: Record<InstructionType, { label: string; icon: IconName }> = {
+  tell: { label: 'Tell', icon: 'chatBubble' },
+  show: { label: 'Show', icon: 'mousePointerClick' },
+  do: { label: 'Do', icon: 'checkArc' },
+};
 
 type ModeFlags = Pick<WidgetSettingsData, `widget_feature_${InstructionType}`>;
 
@@ -72,11 +77,18 @@ export const messageText = (parts: MessagePart[]): string =>
 export const formatMessageTime = (date: Date): string =>
   date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-export const isPending = (msg: ChatMessage): boolean =>
-  msg.kind === 'agent' && (msg.status === 'thinking' || msg.status === 'waiting-for-user');
+export const PENDING_STATUSES = ['thinking', 'waiting-for-user'] as const;
 
-export const taskEnded = (msg: ChatMessage): boolean =>
-  msg.kind === 'agent' && (msg.status === 'done' || msg.status === 'failed' || msg.status === 'stopped');
+export const ENDED_STATUSES = ['done', 'failed', 'stopped'] as const;
+
+const hasStatus =
+  (statuses: readonly AgentStatus[]) =>
+  (msg: ChatMessage): boolean =>
+    msg.kind === 'agent' && msg.status !== undefined && statuses.includes(msg.status);
+
+export const isPending = hasStatus(PENDING_STATUSES);
+
+export const taskEnded = hasStatus(ENDED_STATUSES);
 
 interface FindMessageOptions {
   messages: ChatMessage[];
@@ -111,49 +123,6 @@ export function findMessageForProgress({
     `[MessageFinder] No message found for progress update: totalMessages=${messages.length} isTaskRunning=${isTaskRunning} currentMode=${currentMode}`,
   );
   return null;
-}
-
-function patchPart(message: AgentMessage, index: number, patch: Partial<ProgressPart>): AgentMessage {
-  const current = message.parts[index];
-  if (current?.type !== 'progress') return message;
-  const parts = [...message.parts];
-  parts[index] = { ...current, ...patch };
-  return { ...message, parts };
-}
-
-const openLineFor = (message: AgentMessage, browserToolName: WidgetToolName): number =>
-  message.parts.findIndex(
-    part => part.type === 'progress' && part.status === 'in_progress' && part.browserToolName === browserToolName,
-  );
-
-export function addProgressLine(
-  message: AgentMessage,
-  browserToolName: WidgetToolName,
-  explanation: string,
-): AgentMessage {
-  const open = openLineFor(message, browserToolName);
-  if (open >= 0) return patchPart(message, open, { content: explanation });
-  return {
-    ...message,
-    parts: [...message.parts, { type: 'progress', content: explanation, status: 'in_progress', browserToolName }],
-  };
-}
-
-export const markProgressLineComplete = (message: AgentMessage, browserToolName: WidgetToolName): AgentMessage =>
-  patchPart(message, openLineFor(message, browserToolName), { status: 'completed' });
-
-export function markProgressLineFailed(
-  message: AgentMessage,
-  browserToolName: WidgetToolName,
-  error: string,
-): AgentMessage {
-  const index = openLineFor(message, browserToolName);
-  const part = message.parts[index];
-  if (part?.type !== 'progress') return message;
-  return patchPart(message, index, {
-    status: 'failed',
-    content: error ? `${part.content} (${error})` : part.content,
-  });
 }
 
 const newMessage = (kind: ChatMessage['kind'], content: string) => ({

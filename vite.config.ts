@@ -1,12 +1,8 @@
 /**
- * Vite config for the widget package. The default export branches on `command`: `build` produces the
- * library-mode production bundle, anything else runs the dev server.
- *
- * Both alias the legacy `use-sync-external-store/shim` to the local stand-in, so dev and the bundle run the
- * same code. The production build adds a `typescript-declarations` plugin that generates the `.d.ts` tree
- * and keeps React external so the host page supplies it. The dev build adds `widget-dev-routing`, so a
- * page pointed at the production bundle URL also works against the dev server. The build target is the
- * supported-browser floor README documents, led by Safari 16.4, the first Safari with import maps.
+ * Vite config for the widget package: `build` produces the library-mode bundle with React external and a
+ * `typescript-declarations` plugin, anything else runs the dev server with `widget-dev-routing` so a page pointed
+ * at the production bundle URL also works. Both alias `use-sync-external-store/shim` to the local stand-in. The
+ * build target is the browser floor README documents, led by Safari 16.4, the first Safari with import maps.
  */
 import { execSync } from 'node:child_process';
 import { resolve } from 'node:path';
@@ -68,14 +64,9 @@ export default defineConfig(({ command }) => {
           compress: {
             drop_console: ['log', 'info', 'debug'],
             drop_debugger: true,
-            module: true,
-            toplevel: true,
             passes: 3,
           },
-          mangle: { toplevel: true },
-          format: {
-            comments: false,
-          },
+          format: { comments: false },
         },
       },
       plugins: [
@@ -83,14 +74,7 @@ export default defineConfig(({ command }) => {
         {
           name: 'typescript-declarations',
           closeBundle() {
-            try {
-              console.log('Generating TypeScript declarations...');
-              execSync('tsc -p tsconfig.build.json', { stdio: 'inherit', cwd: cwd() });
-              console.log('✓ TypeScript declarations generated');
-            } catch (error) {
-              console.error('TypeScript declaration generation failed');
-              throw error;
-            }
+            execSync('tsc -p tsconfig.build.json', { stdio: 'inherit', cwd: cwd() });
           },
         },
       ],

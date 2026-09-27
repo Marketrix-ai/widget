@@ -1,10 +1,12 @@
 /**
  * Shared test fixtures for widget tests. `getMockWidgetConfig`/`validSettings`/`credentialedConfig` build a
  * complete, schema-valid tenant config (preview and resolved-production shapes); `agentMessage` builds an
- * agent `ChatMessage` and `ofKind` narrows one; `mockMediaStream` stubs the browser's un-mockable
- * `MediaStream`; `asStreamClientInternals` reaches `streamClient`'s private `handleMessage`/`notifyError`
+ * agent `ChatMessage` and `ofKind` narrows one; `mockMediaStream`/`liveMediaStream` stub the browser's
+ * un-mockable `MediaStream`, `stubRect` gives every element a layout jsdom lacks, `$` finds a tag or throws; `asStreamClientInternals` reaches `streamClient`'s private `handleMessage`/`notifyError`
  * for simulating SSE events and stream failures.
  */
+import { vi } from 'bun:test';
+
 import { WidgetSettingsDataSchema } from '../sdk/contracts/widgetSettings';
 import { streamClient } from '../services/StreamClient';
 import type { CredentialedConfig } from '../services/WidgetService';
@@ -100,9 +102,29 @@ export function mockMediaStream(overrides: Record<string, unknown> = {}): MediaS
   } as unknown as MediaStream;
 }
 
+export const liveMediaStream = (): MediaStream =>
+  mockMediaStream({
+    getVideoTracks: () => [{ readyState: 'live', addEventListener: vi.fn() }],
+    getTracks: () => [{ stop: vi.fn() }],
+  });
+
+export function stubRect(rect: Partial<DOMRect> = { top: 0, left: 0, width: 10, height: 10 }): void {
+  Element.prototype.getBoundingClientRect = () => rect as DOMRect;
+}
+
+export function $<K extends keyof HTMLElementTagNameMap>(
+  tag: K,
+  root: ParentNode = document,
+): HTMLElementTagNameMap[K] {
+  const element = root.querySelector(tag);
+  if (!element) throw new Error(`no <${tag}> under the given root`);
+  return element;
+}
+
 interface StreamClientTestHandle {
   handleMessage: (typeof streamClient)['handleMessage'];
   notifyError: (typeof streamClient)['notifyError'];
+  giveUp: (message: string) => void;
 }
 
 export const asStreamClientInternals = (): StreamClientTestHandle => streamClient as unknown as StreamClientTestHandle;
