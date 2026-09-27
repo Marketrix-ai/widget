@@ -35,8 +35,12 @@ export type ToolProgress =
   | { status: 'completed' }
   | { status: 'failed'; error: string };
 
-const runningMode = (state: ChatState, currentMode: InstructionType): InstructionType =>
-  state.task.phase === 'running' ? state.task.mode : currentMode;
+const progressTarget = (state: ChatState, currentMode: InstructionType) =>
+  findMessageForProgress({
+    messages: state.messages,
+    isTaskRunning: state.task.phase === 'running',
+    currentMode: state.task.phase === 'running' ? state.task.mode : currentMode,
+  });
 
 function applyToolProgress(msg: AgentMessage, tool: WidgetToolName, progress: ToolProgress): AgentMessage {
   const index = msg.parts.findIndex(
@@ -68,9 +72,7 @@ export function reduceToolProgress(
   progress: ToolProgress,
   currentMode: InstructionType,
 ): ChatState {
-  const isTaskRunning = state.task.phase === 'running';
-  const mode = runningMode(state, currentMode);
-  const found = findMessageForProgress({ messages: state.messages, isTaskRunning, currentMode: mode });
+  const found = progressTarget(state, currentMode);
   if (!found) return state;
 
   let updatedMsg = found.message;
@@ -78,14 +80,12 @@ export function reduceToolProgress(
     updatedMsg = applyToolProgress(updatedMsg, browserToolName, progress);
   }
 
-  if (isTaskRunning && isPending(updatedMsg)) {
+  if (state.task.phase === 'running' && isPending(updatedMsg)) {
     const waiting = progress.status === 'in_progress' && progress.mode === 'show' && waitsForUser(browserToolName);
     updatedMsg = { ...updatedMsg, status: waiting ? 'waiting-for-user' : 'thinking' };
   }
 
-  const messages = [...state.messages];
-  messages[found.index] = updatedMsg;
-  return { ...state, messages };
+  return { ...state, messages: state.messages.with(found.index, updatedMsg) };
 }
 
 const appendText = (msg: AgentMessage, text: string): AgentMessage => ({
@@ -100,13 +100,8 @@ function stampProgressMessage(
   currentMode: InstructionType,
   stamp: (msg: AgentMessage) => AgentMessage,
 ): ChatState {
-  const found = findMessageForProgress({
-    messages: state.messages,
-    isTaskRunning: state.task.phase === 'running',
-    currentMode: runningMode(state, currentMode),
-  });
-  const messages = [...state.messages];
-  if (found) messages[found.index] = stamp(found.message);
+  const found = progressTarget(state, currentMode);
+  const messages = found ? state.messages.with(found.index, stamp(found.message)) : state.messages;
   return { messages, task: ended(state.task) };
 }
 
