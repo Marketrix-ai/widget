@@ -1,13 +1,15 @@
 /**
  * Packaging gate for the built widget, run last in `bun run ci`.
  *
- * `bytesPerSource` attributes bundle bytes to their source files from the source map; the script then
- * checks the artifacts exist, stay under their byte budgets, ship as one ES module with no CSS file and
- * no bundled React, and that no dependency grew past its budget. Budgets sit about 15% above the
+ * Checks the artifacts exist, stay under their byte budgets, ship as one ES module with no CSS file, no
+ * dynamic require and no bundled React, and that no dependency grew past its budget. Dependency sizes come
+ * from the build's `module-sizes.json`, measured before minification; budgets sit about 15% above the
  * current build so growth is noticed; raise one deliberately, never to make CI pass.
  */
 
 import { readdirSync, readFileSync, statSync } from 'node:fs';
+
+import { z } from 'zod';
 
 import { REACT_EXTERNALS } from '../vite.config';
 
@@ -52,85 +54,38 @@ if (notImported.length > 0) {
 }
 
 const DEPENDENCY_BUDGETS: Record<string, number> = {
-  '@rrweb/record': 84_000,
-  '@base-ui/react': 82_000,
-  '@base-ui/utils': 13_000,
-  '@orpc/client': 11_000,
-  '@orpc/standard-server-fetch': 4_100,
-  '@orpc/standard-server': 4_000,
-  '@orpc/shared': 3_600,
-  '@floating-ui/utils': 1_200,
-  zod: 116_000,
+  '@base-ui/react': 212_000,
+  zod: 208_000,
+  '@rrweb/record': 157_000,
+  '@base-ui/utils': 31_000,
+  '@orpc/client': 22_400,
+  '@orpc/standard-server-fetch': 8_500,
+  '@orpc/standard-server': 7_900,
+  '@orpc/shared': 7_700,
+  '@floating-ui/utils': 2_300,
 };
 
-const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+const moduleSizes = z.record(z.string(), z.number()).parse(JSON.parse(readFileSync('dist/module-sizes.json', 'utf8')));
 
-function bytesPerSource(sourceMap: { mappings: string }, bundle: string): Map<number, number> {
-  const lines = bundle.split('\n');
-  const bytes = new Map<number, number>();
-  let source = 0;
-  sourceMap.mappings.split(';').forEach((row: string, lineIndex: number) => {
-    let column = 0;
-    const marks: Array<[number, number]> = [];
-    for (const segment of row.split(',').filter(Boolean)) {
-      let shift = 0;
-      let value = 0;
-      const fields: number[] = [];
-      for (const character of segment) {
-        const digit = B64.indexOf(character);
-        value += (digit & 31) << shift;
-        if (digit & 32) {
-          shift += 5;
-          continue;
-        }
-        fields.push(value & 1 ? -(value >> 1) : value >> 1);
-        value = 0;
-        shift = 0;
-      }
-      column += fields[0] ?? 0;
-      if (fields.length >= 4) source += fields[1] ?? 0;
-      marks.push([column, fields.length >= 4 ? source : -1]);
-    }
-    const lineLength = (lines[lineIndex] ?? '').length + 1;
-    marks.forEach(([start, index], position) => {
-      const end = marks[position + 1]?.[0] ?? lineLength;
-      if (index >= 0) bytes.set(index, (bytes.get(index) ?? 0) + Math.max(0, end - start));
-    });
-  });
-  return bytes;
+if (/\brequire\(/.test(bundle)) errors.push('dist/widget.mjs contains a dynamic require');
+const inlined = Object.keys(moduleSizes).filter(id => /node_modules\/(react|react-dom)\//.test(id));
+if (inlined.length > 0) {
+  errors.push(
+    `React was compiled into the bundle (${inlined.length} modules, e.g. ${inlined[0]}) — it is a peer dependency`,
+  );
 }
 
-type SourceMap = { mappings: string; sources?: string[]; sourcesContent?: string[] };
-let sourceMap: SourceMap | null = null;
-try {
-  sourceMap = JSON.parse(readFileSync('dist/widget.mjs.map', 'utf8')) as SourceMap;
-} catch (error) {
-  errors.push(`dist/widget.mjs.map is missing or invalid: ${error instanceof Error ? error.message : String(error)}`);
+const perPackage = new Map<string, number>();
+for (const [id, size] of Object.entries(moduleSizes)) {
+  const name = /node_modules\/((?:@[^/]+\/)?[^/]+)/.exec(id)?.[1];
+  if (name) perPackage.set(name, (perPackage.get(name) ?? 0) + size);
 }
-
-if (sourceMap) {
-  if (sourceMap.sourcesContent?.some(source => /\brequire\([^)]+\)/.test(source))) {
-    errors.push('dist/widget.mjs.map contains a dynamic require');
-  }
-  const inlined = (sourceMap.sources ?? []).filter(source => /node_modules\/(react|react-dom)\//.test(source));
-  if (inlined.length > 0) {
-    errors.push(
-      `React was compiled into the bundle (${inlined.length} sources, e.g. ${inlined[0]}) — it is a peer dependency`,
-    );
-  }
-
-  const perPackage = new Map<string, number>();
-  for (const [index, size] of bytesPerSource(sourceMap, bundle)) {
-    const name = /node_modules\/((?:@[^/]+\/)?[^/]+)/.exec(sourceMap.sources?.[index] ?? '')?.[1];
-    if (name) perPackage.set(name, (perPackage.get(name) ?? 0) + size);
-  }
-  for (const [name, size] of [...perPackage].sort((a, b) => b[1] - a[1])) {
-    const budget = DEPENDENCY_BUDGETS[name];
-    if (budget === undefined) {
-      errors.push(`${name} is new in the bundle (${size} bytes) — add it to DEPENDENCY_BUDGETS deliberately`);
-    } else if (size > budget) {
-      errors.push(`${name} (${size} bytes) exceeds its budget ${budget} bytes`);
-    }
+for (const [name, size] of [...perPackage].sort((a, b) => b[1] - a[1])) {
+  const budget = DEPENDENCY_BUDGETS[name];
+  if (budget === undefined) {
+    errors.push(`${name} is new in the bundle (${size} bytes) — add it to DEPENDENCY_BUDGETS deliberately`);
+  } else if (size > budget) {
+    errors.push(`${name} (${size} bytes) exceeds its budget ${budget} bytes`);
   }
 }
 

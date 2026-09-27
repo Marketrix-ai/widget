@@ -1,6 +1,7 @@
 /**
  * Vite config for the widget package: `build` produces the library-mode bundle with React external and a
- * `typescript-declarations` plugin, anything else runs the dev server with `widget-dev-routing` so a page pointed
+ * `typescript-declarations` plugin and writes `module-sizes.json` (each module's rendered bytes, read by
+ * `bundle:check`), anything else runs the dev server with `widget-dev-routing` so a page pointed
  * at the production bundle URL also works. Both alias `use-sync-external-store/shim` to the local stand-in. The
  * build target is the browser floor README documents, led by Safari 16.4, the first Safari with import maps.
  */
@@ -71,6 +72,21 @@ export default defineConfig(({ command }) => {
       },
       plugins: [
         react(),
+        {
+          name: 'module-sizes',
+          generateBundle(_options, bundle) {
+            const sizes = Object.values(bundle).flatMap(output =>
+              output.type === 'chunk'
+                ? Object.entries(output.modules).map(([id, module]) => [id, module.renderedLength])
+                : [],
+            );
+            this.emitFile({
+              type: 'asset',
+              fileName: 'module-sizes.json',
+              source: JSON.stringify(Object.fromEntries(sizes)),
+            });
+          },
+        },
         {
           name: 'typescript-declarations',
           closeBundle() {
