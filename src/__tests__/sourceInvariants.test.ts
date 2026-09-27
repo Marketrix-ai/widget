@@ -1,6 +1,6 @@
 /**
- * Pins what eslint and tsc cannot express: the published package's contents, and text that must agree across
- * files (the loader's import map, z-index tokens, the stylesheet, the hooks folder). fs + regex, no rendering.
+ * Pins what eslint and tsc cannot express: the published package's contents and test script, and text that must agree
+ * across files (the loader's import map, z-index tokens, the stylesheet, the hooks folder). fs + regex, no rendering.
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -26,6 +26,10 @@ describe('package.json', () => {
   it('pins the same bun version as the Dockerfile base image — one drifts, CI and local diverge', () => {
     const bunVersion = (pkg.packageManager as string).replace(/^bun@/, '');
     expect(read('Dockerfile')).toContain(`FROM oven/bun:${bunVersion}-alpine AS base`);
+  });
+
+  it("runs every test file isolated, so one file's module mocks never leak into another", () => {
+    expect(pkg.scripts.test).toContain('--isolate');
   });
 });
 
