@@ -204,14 +204,11 @@ async function dispatchClickToolCall(toolCallId: string): Promise<void> {
   });
 }
 
-async function sentPayloadFor<T extends unknown[]>(
-  send: Mock<(...args: T) => Promise<void>>,
-  toolCallId: string,
-): Promise<Record<string, unknown>> {
+async function sentPayloadFor(send: Mock<typeof streamClient.send>, toolCallId: string) {
   await waitFor(() => expect(send).toHaveBeenCalled());
   return send.mock.calls
-    .map(c => c[0])
-    .find(p => (p as { tool_call_id?: string }).tool_call_id === toolCallId) as Record<string, unknown>;
+    .map(([command]) => command)
+    .find(command => command.type === 'tool/response' && command.tool_call_id === toolCallId);
 }
 
 describe('commit skips the render for a transition that reports no change', () => {
