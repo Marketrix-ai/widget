@@ -21,6 +21,9 @@ import {
   reduceTransportFailure,
 } from '../chatReducer';
 
+const agentAt = (state: ChatState, index = 0) => ofKind(state.messages[index], 'agent');
+const textAt = (state: ChatState, index = 0) => messageText(agentAt(state, index).parts);
+
 const expectNoOp = (result: ChatState, state: ChatState) => {
   expect(result).toBe(state);
 };
@@ -54,7 +57,7 @@ describe('reduceEvent — task/status', () => {
   ] as const)('%s ends the task and marks the active message %s', (status, expected) => {
     const result = reduceEvent(runningState(), { type: 'task/status', status }, 'do');
     expect(result.task.phase).toBe('idle');
-    expect(ofKind(result.messages[0], 'agent').status).toBe(expected);
+    expect(agentAt(result).status).toBe(expected);
   });
 
   it('terminal status renders its closing message as an appended text part', () => {
@@ -69,8 +72,8 @@ describe('reduceEvent — task/status', () => {
       'do',
     );
 
-    expect(messageText(ofKind(result.messages[0], 'agent').parts)).toBe('All done!');
-    expect(ofKind(result.messages[0], 'agent').parts).toEqual([
+    expect(textAt(result)).toBe('All done!');
+    expect(agentAt(result).parts).toEqual([
       { type: 'progress', content: 'Clicking element', status: 'completed', browserToolName: 'click_element' },
       { type: 'text', content: 'All done!' },
     ]);
@@ -78,12 +81,12 @@ describe('reduceEvent — task/status', () => {
 
   it('has_question pauses (not terminal): the message asks the visitor and the task idles', () => {
     const before = runningState();
-    expect(ofKind(before.messages[0], 'agent').status).toBe('thinking');
+    expect(agentAt(before).status).toBe('thinking');
 
     const event: WidgetEvent = { type: 'task/status', status: 'has_question', message: 'Which account?' };
     const result = reduceEvent(before, event, 'do');
 
-    const msg = ofKind(result.messages[0], 'agent');
+    const msg = agentAt(result);
     expect(msg.status).toBe('question');
     expect(messageText(msg.parts)).toContain('Which account?');
     expect(msg.parts[msg.parts.length - 1]).toEqual({ type: 'text', content: 'Which account?' });
@@ -92,7 +95,7 @@ describe('reduceEvent — task/status', () => {
 
   it.each(['completed', 'failed', 'stopped', 'has_question'] as const)('%s settles the placeholder', status => {
     const result = reduceEvent(runningState(), { type: 'task/status', status }, 'do');
-    expect(isPending(ofKind(result.messages[0], 'agent'))).toBe(false);
+    expect(isPending(agentAt(result))).toBe(false);
   });
 });
 
@@ -105,10 +108,8 @@ describe('reduceTransportFailure', () => {
     const result = reduceTransportFailure(state, 'Could not reconnect to the assistant. Try again.');
 
     expect(result.messages[0]).toBe(state.messages[0]);
-    expect(isPending(ofKind(result.messages[1], 'agent'))).toBe(false);
-    expect(messageText(ofKind(result.messages[1], 'agent').parts)).toBe(
-      'Working on it\nCould not reconnect to the assistant. Try again.',
-    );
+    expect(isPending(agentAt(result, 1))).toBe(false);
+    expect(textAt(result, 1)).toBe('Working on it\nCould not reconnect to the assistant. Try again.');
     expect(result.task).toEqual({ phase: 'idle' });
   });
 });
@@ -118,10 +119,8 @@ describe('reduceStaleReply', () => {
     const state: ChatState = { messages: [agentMessage({ parts: [] })], task: { phase: 'idle' } };
     const result = reduceStaleReply(state, 'agent-1', 'This is taking longer than expected. Please try again.');
 
-    expect(isPending(ofKind(result.messages[0], 'agent'))).toBe(false);
-    expect(messageText(ofKind(result.messages[0], 'agent').parts)).toBe(
-      'This is taking longer than expected. Please try again.',
-    );
+    expect(isPending(agentAt(result))).toBe(false);
+    expect(textAt(result)).toBe('This is taking longer than expected. Please try again.');
   });
 
   it.each([{ phase: 'running', mode: 'do' } as const, { phase: 'idle' } as const])(
@@ -130,8 +129,8 @@ describe('reduceStaleReply', () => {
       const state: ChatState = { messages: [agentMessage()], task };
       const result = reduceStaleReply(state, 'agent-1', 'timeout text');
 
-      expect(isPending(ofKind(result.messages[0], 'agent'))).toBe(false);
-      expect(messageText(ofKind(result.messages[0], 'agent').parts)).toBe('Working on it\ntimeout text');
+      expect(isPending(agentAt(result))).toBe(false);
+      expect(textAt(result)).toBe('Working on it\ntimeout text');
     },
   );
 
@@ -159,13 +158,11 @@ describe('reduceStaleReply', () => {
   it('stamps status failed so a late completed status cannot re-target the watchdog bubble', () => {
     const state: ChatState = { messages: [agentMessage({ parts: [] })], task: { phase: 'idle' } };
     const stale = reduceStaleReply(state, 'agent-1', 'This is taking longer than expected. Please try again.');
-    expect(ofKind(stale.messages[0], 'agent').status).toBe('failed');
+    expect(agentAt(stale).status).toBe('failed');
 
     const late = reduceEvent(stale, { type: 'task/status', status: 'completed' }, 'do');
-    expect(ofKind(late.messages[0], 'agent').status).toBe('failed');
-    expect(messageText(ofKind(late.messages[0], 'agent').parts)).toBe(
-      'This is taking longer than expected. Please try again.',
-    );
+    expect(agentAt(late).status).toBe('failed');
+    expect(textAt(late)).toBe('This is taking longer than expected. Please try again.');
   });
 });
 
@@ -177,7 +174,7 @@ describe('reduceEvent — tool/call', () => {
 
   it('adds an in-progress progress line to the active message', () => {
     const result = reduceEvent(runningState(), toolCall(), 'do');
-    const progressParts = ofKind(result.messages[0], 'agent').parts.filter(p => p.type === 'progress');
+    const progressParts = agentAt(result).parts.filter(p => p.type === 'progress');
     expect(progressParts).toHaveLength(1);
     expect(progressParts[0]?.status).toBe('in_progress');
   });
@@ -188,7 +185,7 @@ describe('reduceEvent — tool/call', () => {
       toolCall({ explanation: '' }, { browser_tool: 'get_html', args: {} }),
       'do',
     );
-    const line = ofKind(result.messages[0], 'agent').parts.find(part => part.type === 'progress');
+    const line = agentAt(result).parts.find(part => part.type === 'progress');
     expect(line?.content).toBe('Reading the page');
     expect(line?.content).not.toMatch(/screen/i);
   });
@@ -200,7 +197,7 @@ describe('reduceEvent — chat/response', () => {
     const event: WidgetEvent = { type: 'chat/response', request_id: 'req-1', text: 'Here you go' };
     const result = reduceEvent(state, event, 'tell');
 
-    const msg = ofKind(result.messages[0], 'agent');
+    const msg = agentAt(result);
     expect(messageText(msg.parts)).toBe('Here you go');
     expect(isPending(msg)).toBe(false);
     expect(msg.status).toBeUndefined();
@@ -214,7 +211,7 @@ describe('reduceEvent — chat/delta', () => {
     const first = reduceEvent(state, { type: 'chat/delta', request_id: 'req-1', text: 'Hel' }, 'tell');
     const second = reduceEvent(first, { type: 'chat/delta', request_id: 'req-1', text: 'lo' }, 'tell');
 
-    const msg = ofKind(second.messages[0], 'agent');
+    const msg = agentAt(second);
     expect(messageText(msg.parts)).toBe('Hello');
     expect(isPending(msg)).toBe(false);
     expect(msg.parts).toEqual([{ type: 'text', content: 'Hello', streaming: true }]);
@@ -225,7 +222,7 @@ describe('reduceEvent — chat/delta', () => {
     const streamed = reduceEvent(state, { type: 'chat/delta', request_id: 'req-1', text: 'Hello wor' }, 'tell');
     const final = reduceEvent(streamed, { type: 'chat/response', request_id: 'req-1', text: 'Hello world' }, 'tell');
 
-    const msg = ofKind(final.messages[0], 'agent');
+    const msg = agentAt(final);
     expect(messageText(msg.parts)).toBe('Hello world');
     expect(msg.parts).toEqual([{ type: 'text', content: 'Hello world' }]);
   });
@@ -236,7 +233,7 @@ describe('reduceEvent — chat/delta', () => {
     const repeated = reduceEvent(once, { type: 'chat/response', request_id: 'req-1', text: 'Hello world' }, 'tell');
 
     expect(repeated.messages[0]).toEqual(once.messages[0]);
-    expect(ofKind(repeated.messages[0], 'agent').parts).toEqual([{ type: 'text', content: 'Hello world' }]);
+    expect(agentAt(repeated).parts).toEqual([{ type: 'text', content: 'Hello world' }]);
   });
 });
 
@@ -248,9 +245,9 @@ describe('reduceEvent — chat/error', () => {
     };
     const event: WidgetEvent = { type: 'chat/error', request_id: 'req-2', error: 'PG::ConnectionBad at line 42' };
     const result = reduceEvent(state, event, 'tell');
-    expect(messageText(ofKind(result.messages[0], 'agent').parts)).toBe(`Working on it\n${CHAT_FAILURE_TEXT}`);
-    expect(messageText(ofKind(result.messages[0], 'agent').parts)).not.toContain('PG::ConnectionBad');
-    expect(isPending(ofKind(result.messages[0], 'agent'))).toBe(false);
+    expect(textAt(result)).toBe(`Working on it\n${CHAT_FAILURE_TEXT}`);
+    expect(textAt(result)).not.toContain('PG::ConnectionBad');
+    expect(isPending(agentAt(result))).toBe(false);
   });
 });
 
@@ -295,14 +292,14 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
   it('completed marks the in-progress line complete', () => {
     const inProgress = reduceEvent(runningState(), toolCall({ tool_call_id: 'c', explanation: 'x' }), 'do');
     const done = reduceToolProgress(inProgress, 'click_element', { status: 'completed' }, 'do');
-    const part = ofKind(done.messages[0], 'agent').parts.find(p => p.type === 'progress');
+    const part = agentAt(done).parts.find(p => p.type === 'progress');
     expect(part?.status).toBe('completed');
   });
 
   it('failed marks the line failed and surfaces the error text', () => {
     const inProgress = reduceEvent(runningState(), toolCall({ tool_call_id: 'c', explanation: 'Clicking' }), 'do');
     const failed = reduceToolProgress(inProgress, 'click_element', { status: 'failed', error: 'no element' }, 'do');
-    const part = ofKind(failed.messages[0], 'agent').parts.find(p => p.type === 'progress');
+    const part = agentAt(failed).parts.find(p => p.type === 'progress');
     expect(part?.status).toBe('failed');
     expect(part?.content).toContain('no element');
   });
@@ -316,7 +313,7 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
 
     const done = reduceToolProgress(twoOpen, 'click_element', { status: 'completed' }, 'show');
 
-    const lines = ofKind(done.messages[0], 'agent').parts.filter(p => p.type === 'progress');
+    const lines = agentAt(done).parts.filter(p => p.type === 'progress');
     expect(lines.map(line => [line.browserToolName, line.status])).toEqual([
       ['click_element', 'completed'],
       ['get_html', 'in_progress'],
@@ -330,7 +327,7 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
       { status: 'in_progress', mode: 'show', explanation: 'x' },
       'show',
     );
-    expect(ofKind(result.messages[0], 'agent').status).toBeUndefined();
+    expect(agentAt(result).status).toBeUndefined();
   });
 
   it.each([
@@ -343,7 +340,7 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
       { status: 'in_progress', mode, explanation: 'x' },
       mode,
     );
-    expect(ofKind(result.messages[0], 'agent').status).toBe(status);
+    expect(agentAt(result).status).toBe(status);
   });
 
   it.each([
@@ -360,19 +357,17 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
       { status: 'in_progress', mode: callMode, explanation: 'x' },
       'tell',
     );
-    expect(ofKind(result.messages[0], 'agent').status).toBe(status);
+    expect(agentAt(result).status).toBe(status);
   });
 
   it('reduceToolDone ends the task and marks the message done', () => {
     const result = reduceToolDone(runningState(), 'do', { message: '', success: true });
     expect(result.task).toEqual({ phase: 'idle' });
-    expect(ofKind(result.messages[0], 'agent').status).toBe('done');
+    expect(agentAt(result).status).toBe('done');
   });
 
   it('reduceToolDone marks the message failed when the agent reports it did not succeed', () => {
-    expect(
-      ofKind(reduceToolDone(runningState(), 'do', { message: '', success: false }).messages[0], 'agent').status,
-    ).toBe('failed');
+    expect(agentAt(reduceToolDone(runningState(), 'do', { message: '', success: false })).status).toBe('failed');
   });
 
   it('a duplicate completion does not fall back past the stamp onto an older settled reply', () => {
@@ -384,7 +379,7 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
     const state: ChatState = { messages: [oldReply, agentMessage()], task: { phase: 'running', mode: 'do' } };
 
     const afterFirst = reduceToolDone(state, 'do', { message: '', success: true });
-    expect(ofKind(afterFirst.messages[1], 'agent').status).toBe('done');
+    expect(agentAt(afterFirst, 1).status).toBe('done');
 
     const afterDuplicate = reduceToolDone(afterFirst, 'do', { message: '', success: true });
 
@@ -393,7 +388,7 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
 
   it('reduceStop marks the active message stopped and ends the task', () => {
     const result = reduceStop(runningState(), 'do');
-    expect(ofKind(result.messages[0], 'agent').status).toBe('stopped');
+    expect(agentAt(result).status).toBe('stopped');
     expect(result.task).toEqual({ phase: 'stopped' });
   });
 
@@ -416,7 +411,7 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
     const succeeded = reduceToolProgress(called, 'done', { status: 'completed' }, 'tell');
     const done = reduceToolDone(succeeded, 'tell', { message: 'Wrapping up', success: true });
 
-    const parts = ofKind(done.messages[0], 'agent').parts;
+    const parts = agentAt(done).parts;
     expect(parts.some(p => p.type === 'progress')).toBe(false);
     expect(JSON.stringify(parts)).not.toContain('Unknown tool');
   });
@@ -443,7 +438,7 @@ describe('a Show/Do task ends with its closing message', () => {
       'show',
     );
 
-    const msg = ofKind(settled.messages[0], 'agent');
+    const msg = agentAt(settled);
     expect(msg.status).toBe('done');
     expect(messageText(msg.parts)).toBe('Your plan is upgraded.');
     expect(settled.task).toEqual({ phase: 'idle' });
@@ -455,7 +450,7 @@ describe('a Show/Do task ends with its closing message', () => {
       { type: 'task/status', status: 'completed', message: 'Task completed' },
       'show',
     );
-    expect(messageText(ofKind(settled.messages[0], 'agent').parts)).toBe('Task completed');
+    expect(textAt(settled)).toBe('Task completed');
   });
 
   it('a failed run shows the agent message once, not the generic failure after it', () => {
@@ -466,7 +461,7 @@ describe('a Show/Do task ends with its closing message', () => {
     );
     const errored = reduceEvent(failed, { type: 'chat/error', request_id: 'req-1', error: 'Agent failed' }, 'do');
 
-    const msg = ofKind(errored.messages[0], 'agent');
+    const msg = agentAt(errored);
     expect(msg.status).toBe('failed');
     expect(messageText(msg.parts)).toBe('The checkout page would not load.');
   });
@@ -478,7 +473,7 @@ describe('a Show/Do task ends with its closing message', () => {
       'do',
     );
     const errored = reduceEvent(failed, { type: 'chat/error', request_id: 'req-1', error: 'Agent failed' }, 'do');
-    expect(messageText(ofKind(errored.messages[0], 'agent').parts)).toBe(CHAT_FAILURE_TEXT);
+    expect(textAt(errored)).toBe(CHAT_FAILURE_TEXT);
   });
 });
 
