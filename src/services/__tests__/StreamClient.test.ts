@@ -208,7 +208,7 @@ describe('StreamClient guard conditions', () => {
   it('a chat/error that is not the auth one leaves credentials untouched and reconnection still possible', () => {
     const { client, inner } = freshChatClient('open');
     const errors: Error[] = [];
-    client.addCallbacks({ onError: e => errors.push(e) });
+    client.addCallbacks({ onMessage: () => {}, onError: e => errors.push(e) });
 
     inner.handleMessage({ type: 'chat/error', request_id: 'req-123', error: 'boom' });
 
@@ -270,7 +270,7 @@ describe('StreamClient retry affordance', () => {
   it('canReconnect is false once auth is rejected — retrying only re-earns the 401', async () => {
     const client = freshClient();
     const errors: string[] = [];
-    const callbacks = { onError: (e: Error) => errors.push(e.message) };
+    const callbacks = { onMessage: () => {}, onError: (e: Error) => errors.push(e.message) };
     client.addCallbacks(callbacks);
     mockSdk.widgetStream.mockResolvedValue(
       asMockedStream({
@@ -330,7 +330,7 @@ describe('StreamClient fault injection', () => {
     await flushMicrotasks();
 
     const received: WidgetEvent[] = [];
-    const callbacks = { onMessage: (e: WidgetEvent) => received.push(e) };
+    const callbacks = { onMessage: (e: WidgetEvent) => received.push(e), onError: () => {} };
     client.addCallbacks(callbacks);
 
     const second = controlledStream();
@@ -363,7 +363,7 @@ describe('StreamClient fault injection', () => {
     expect(mockSdk.widgetStream).toHaveBeenCalledTimes(1);
 
     const errors: Error[] = [];
-    client.addCallbacks({ onError: e => errors.push(e) });
+    client.addCallbacks({ onMessage: () => {}, onError: e => errors.push(e) });
 
     for (const [i, base] of baseDelays.entries()) {
       await advanceTimersByTimeAsync(base / 2 - 1);
@@ -420,8 +420,9 @@ describe('StreamClient fault injection', () => {
       onMessage: () => {
         throw new Error('subscriber bug');
       },
+      onError: () => {},
     };
-    const listening = { onMessage: (e: WidgetEvent) => received.push(e) };
+    const listening = { onMessage: (e: WidgetEvent) => received.push(e), onError: () => {} };
     client.addCallbacks(throwing);
     client.addCallbacks(listening);
 

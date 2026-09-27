@@ -152,10 +152,9 @@ export function claimTabId(): string {
   return tabId;
 }
 
-export function remintTabId(): string {
+export function remintTabId(): void {
   claimTabId();
   tabId = randomId();
-  return tabId;
 }
 
 const StartedToolCallsSchema = z.array(z.string());
