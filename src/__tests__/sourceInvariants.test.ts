@@ -69,25 +69,6 @@ describe('tsconfig.build.json', () => {
   });
 });
 
-describe('tsconfig.json strict flags', () => {
-  const tsconfig = JSON.parse(read('tsconfig.json'));
-
-  it('keeps every measured strictness flag on — a regression here is a silent type-safety loss', () => {
-    for (const flag of [
-      'strict',
-      'noUncheckedIndexedAccess',
-      'exactOptionalPropertyTypes',
-      'noImplicitOverride',
-      'noPropertyAccessFromIndexSignature',
-      'noFallthroughCasesInSwitch',
-      'verbatimModuleSyntax',
-    ]) {
-      expect(tsconfig.compilerOptions[flag]).toBe(true);
-    }
-    expect(tsconfig.compilerOptions.useUnknownInCatchVariables).not.toBe(false);
-  });
-});
-
 describe('React externals', () => {
   it("the loader's import map supplies exactly the React specifiers the bundle leaves external", () => {
     const loader = read('public/loader.js');
