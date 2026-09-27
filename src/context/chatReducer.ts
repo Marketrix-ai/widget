@@ -85,7 +85,7 @@ export function reduceToolProgress(
     updatedMsg = { ...updatedMsg, status: waiting ? 'waiting-for-user' : 'thinking' };
   }
 
-  return { ...state, messages: state.messages.with(found.index, updatedMsg) };
+  return { ...state, messages: state.messages.map((msg, i) => (i === found.index ? updatedMsg : msg)) };
 }
 
 const appendText = (msg: AgentMessage, text: string): AgentMessage => ({
@@ -101,7 +101,9 @@ function stampProgressMessage(
   stamp: (msg: AgentMessage) => AgentMessage,
 ): ChatState {
   const found = progressTarget(state, currentMode);
-  const messages = found ? state.messages.with(found.index, stamp(found.message)) : state.messages;
+  const messages = found
+    ? state.messages.map((msg, i) => (i === found.index ? stamp(found.message) : msg))
+    : state.messages;
   return { messages, task: ended(state.task) };
 }
 
