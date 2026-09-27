@@ -177,6 +177,8 @@
   min-width: 0;
   flex: 1 1 0%;
   position: relative;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .mtx-button[data-variant='tab']:hover {
@@ -186,11 +188,6 @@
 .mtx-button[data-variant='tab'][aria-selected='true'] {
   color: var(--primary);
   font-weight: 600;
-}
-
-.mtx-button[data-stacked='true'] {
-  flex-direction: column;
-  gap: 2px;
 }
 
 .mtx-button[data-full='true'] {

@@ -1,7 +1,7 @@
 /**
- * The numbered address space the agent drives the host page by. `reindexAndSnapshot` stamps `data-id` on
- * every indexable element of a document clone in one pass, pairing each live element with its clone by
- * document order; `getValidatedElement` resolves an index back to a live element or throws why it can't, `notInteractableReason`
+ * The numbered address space the agent drives the host page by. `reindexAndSnapshot` stamps `data-id` on every
+ * indexable element of a document clone in one pass, pairing each live element with its clone by document order;
+ * `getValidatedElement` resolves an index back to a live element or throws why it can't, `notInteractableReason`
  * explains why an element can't be acted on, and `domService` groups them for the tools. An element that changed
  * between turns is reported as changed rather than silently acted on.
  */

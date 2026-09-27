@@ -1,7 +1,7 @@
 /**
- * `Button` — the one button primitive, over Base UI's `Button`. Variant, size and stacking are exposed as `data-*` attributes and styled in CSS; shape and elevation resolve to inline
- * radius and shadow from the design tokens. `type` defaults to `button` so a widget button inside a
- * host form never submits it.
+ * `Button` — the one button primitive, over Base UI's `Button`. Variant and size are exposed as `data-*`
+ * attributes and styled in CSS; shape and elevation resolve to inline radius and shadow from the design tokens.
+ * `type` defaults to `button` so a widget button inside a host form never submits it.
  */
 import { Button as BaseButton } from '@base-ui/react/button';
 import type { ComponentPropsWithRef } from 'react';
@@ -17,7 +17,6 @@ interface ButtonProps extends ComponentPropsWithRef<'button'> {
   elevation?: ShadowToken;
   size?: ButtonSize;
   shape?: ButtonShape;
-  stacked?: boolean;
   variant?: ButtonVariant;
   full?: boolean;
 }
@@ -33,7 +32,6 @@ export function Button({
   full,
   shape = 'default',
   size = 'md',
-  stacked = false,
   type = 'button',
   variant = 'primary',
   style,
@@ -47,7 +45,6 @@ export function Button({
       className={withClass('mtx-button', className)}
       data-full={full ? 'true' : 'false'}
       data-size={size}
-      data-stacked={stacked ? 'true' : 'false'}
       data-variant={variant}
       style={{ borderRadius: SHAPE_RADIUS[shape], ...getElevationStyle(elevation), ...style }}
       type={type}
