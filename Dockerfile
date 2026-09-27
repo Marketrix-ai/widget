@@ -15,16 +15,8 @@ FROM base AS builder
 ENV NODE_ENV=production
 RUN bun run build && bun run scripts/precompress.ts dist/widget.mjs
 
-FROM nginx:1.31.6-alpine AS runtime
+FROM nginxinc/nginx-unprivileged:1.31.6-alpine AS runtime
 COPY --from=builder /app/dist/widget.mjs /app/dist/widget.mjs.gz /app/dist/widget.mjs.br /app/dist/loader.js /usr/share/nginx/html/
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-RUN sed -i '/application\/javascript/s/;/ mjs;/' /etc/nginx/mime.types \
-    && sed -i 's|/run/nginx.pid|/tmp/nginx.pid|' /etc/nginx/nginx.conf \
-    && sed -i '/^user /d' /etc/nginx/nginx.conf \
-    && rm -rf /docker-entrypoint.d \
-    && chown -R nginx:nginx /var/cache/nginx /var/log/nginx /usr/share/nginx/html
-
+RUN sed -i '/application\/javascript/s/;/ mjs;/' /etc/nginx/mime.types
 EXPOSE 9001
-
-USER nginx
-CMD ["nginx", "-g", "daemon off;"]
