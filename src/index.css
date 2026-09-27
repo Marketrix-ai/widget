@@ -125,10 +125,6 @@
   min-height: 36px;
 }
 
-.mtx-button[data-variant='primary']:hover {
-  background: color-mix(in oklab, var(--primary) 90%, transparent);
-}
-
 .mtx-button[data-variant='secondary'] {
   background: var(--secondary);
   color: var(--secondary-foreground);
@@ -218,8 +214,9 @@
   color: var(--primary-foreground);
 }
 
+.mtx-button[data-variant='primary']:hover,
 .mtx-icon-button[data-variant='primary']:hover {
-  background: color-mix(in srgb, var(--primary) 85%, transparent);
+  background: color-mix(in oklab, var(--primary) 90%, transparent);
 }
 
 .mtx-icon-button[data-variant='secondary'] {
