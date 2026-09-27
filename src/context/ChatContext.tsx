@@ -8,9 +8,9 @@
  * A turn the api refuses as forbidden (a mode switched off since the page loaded) shows the api's own message.
  */
 import { ORPCError } from '@orpc/client';
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { useWidgetConfig } from '../hooks/useWidget';
+import { useRequiredContext, useWidgetConfig } from '../hooks/useWidget';
 import type { WidgetEvent } from '../sdk';
 import { executeTool, type WidgetToolCall } from '../services/browserTools';
 import { getOrCreateChatId } from '../services/chatThread';
@@ -308,8 +308,4 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-export const useChatContext = (): ChatContextType => {
-  const ctx = useContext(ChatContext);
-  if (!ctx) throw new Error('useChatContext must be used within ChatProvider');
-  return ctx;
-};
+export const useChatContext = () => useRequiredContext(ChatContext, 'ChatProvider');
