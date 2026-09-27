@@ -58,6 +58,11 @@ function selectAt(index: number): HTMLSelectElement {
   return found;
 }
 
+const goTo = (text: string, url: string) =>
+  deferred(text, () => {
+    window.location.href = url;
+  });
+
 function navigate(args: ToolArgs<'navigate'>): ToolExecutionResult {
   const url = httpUrl(args.url);
   if (!url) return fail('An http(s) URL is required');
@@ -65,17 +70,12 @@ function navigate(args: ToolArgs<'navigate'>): ToolExecutionResult {
   if (args.new_tab) {
     return window.open(url, '_blank') ? ok(`Opened ${url} in new tab`) : fail('The browser blocked opening a new tab');
   }
-  return deferred(`Navigating to ${url}`, () => {
-    window.location.href = url;
-  });
+  return goTo(`Navigating to ${url}`, url);
 }
 
 function search({ query, engine }: ToolArgs<'search'>): ToolExecutionResult {
   if (!query) return fail('Query is required');
-  const url = SEARCH_URLS[engine] + encodeURIComponent(query);
-  return deferred(`Searching for "${query}" on ${engine}`, () => {
-    window.location.href = url;
-  });
+  return goTo(`Searching for "${query}" on ${engine}`, SEARCH_URLS[engine] + encodeURIComponent(query));
 }
 
 async function clickElement(args: ToolArgs<'click_element'>): Promise<ToolExecutionResult> {
