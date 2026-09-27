@@ -28,8 +28,6 @@ that tag (read the tag from infra's Helm values — this public repo cannot reac
 
 ## Testing (bun test, not vitest)
 
-- **`bun test` always runs with `--isolate`** — plain bun runs every file in one global object, so a mock
-  or singleton leaks across files by discovery order. Never drop the flag; keep mocks file-scoped anyway.
 - `src/test/preload.ts` is the sole DOM bootstrap (jsdom, `window === globalThis`). `src/test/vi-compat.ts`
   is the one home for `vi.*` helpers bun lacks — extend it rather than hand-rolling a shim.
 - **No `vi.resetModules`**: bump the specifier (`?t=<n>`, or the `?real` import `restoreModuleAfterAll`
