@@ -91,6 +91,10 @@ export function readLocalParsed<T>(key: string, schema: z.ZodType<T>): T | undef
     warnOnce('read', '[StorageService] localStorage is unreadable, degrading to memory for this session:', error);
     return undefined;
   }
+  return parseStored(key, stored, schema);
+}
+
+function parseStored<T>(key: string, stored: string | null, schema: z.ZodType<T>): T | undefined {
   if (stored === null) return undefined;
   try {
     return schema.parse(JSON.parse(stored));
@@ -166,12 +170,7 @@ export function claimToolCall(toolCallId: string): ToolCallClaim {
   if (pageToolCalls.has(toolCallId)) return 'seen';
   pageToolCalls.add(toolCallId);
   const stored = sessionStore(storage => storage.getItem(STARTED_TOOL_CALLS_KEY));
-  let started: string[] = [];
-  try {
-    started = stored === null ? [] : StartedToolCallsSchema.parse(JSON.parse(stored));
-  } catch (error) {
-    logWarn('[StorageService] Ignoring an unreadable started tool-call record:', error);
-  }
+  const started = parseStored(STARTED_TOOL_CALLS_KEY, stored, StartedToolCallsSchema) ?? [];
   if (started.includes(toolCallId)) return 'interrupted';
   const next = [...started, toolCallId].slice(-MAX_STARTED_TOOL_CALLS);
   sessionStore(storage => storage.setItem(STARTED_TOOL_CALLS_KEY, JSON.stringify(next)));
