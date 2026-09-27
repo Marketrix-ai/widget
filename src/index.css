@@ -244,8 +244,8 @@
   opacity: 1;
 }
 
-.mtx-button[data-disabled='true'],
-.mtx-icon-button[data-disabled='true'] {
+.mtx-button:disabled,
+.mtx-icon-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   pointer-events: none;

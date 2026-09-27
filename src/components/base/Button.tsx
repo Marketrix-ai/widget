@@ -1,6 +1,5 @@
 /**
- * `Button` — the one button primitive, over Base UI's `Button`. Variant, size, stacking and disabled
- * state are exposed as `data-*` attributes and styled in CSS; shape and elevation resolve to inline
+ * `Button` — the one button primitive, over Base UI's `Button`. Variant, size and stacking are exposed as `data-*` attributes and styled in CSS; shape and elevation resolve to inline
  * radius and shadow from the design tokens. `type` defaults to `button` so a widget button inside a
  * host form never submits it.
  */
@@ -30,7 +29,6 @@ const SHAPE_RADIUS: Record<ButtonShape, string> = {
 
 export function Button({
   className,
-  disabled,
   elevation,
   full,
   shape = 'default',
@@ -47,12 +45,10 @@ export function Button({
       {...props}
       ref={ref}
       className={withClass('mtx-button', className)}
-      data-disabled={disabled ? 'true' : 'false'}
       data-full={full ? 'true' : 'false'}
       data-size={size}
       data-stacked={stacked ? 'true' : 'false'}
       data-variant={variant}
-      disabled={disabled}
       style={{ borderRadius: SHAPE_RADIUS[shape], ...getElevationStyle(elevation), ...style }}
       type={type}
     />
