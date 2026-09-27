@@ -10,7 +10,7 @@ import type { WidgetEvent, WidgetToolResult } from '../sdk';
 import { toolExplanation, waitsForUser } from '../utils/chat';
 import { errorMessage } from '../utils/errors';
 import { domService } from './DomService';
-import { isTextField, setFieldValue, simulateKeyAction } from './keySimulation';
+import { isValueField, setFieldValue, simulateKeyAction } from './keySimulation';
 import { activeScreenStream } from './ScreenShareService';
 import { ShowModeCancelled, showModeService } from './ShowModeService';
 
@@ -96,7 +96,7 @@ async function clickElement(args: ToolArgs<'click_element'>): Promise<ToolExecut
 function typeText({ index, text, clear }: ToolArgs<'type_text'>): ToolExecutionResult {
   const element = elementAt(index);
 
-  if (isTextField(element)) {
+  if (isValueField(element)) {
     element.focus();
     setFieldValue(element, clear ? text : element.value + text);
     element.dispatchEvent(new Event('blur', { bubbles: true }));

@@ -111,6 +111,20 @@ describe('simulateKeyAction Backspace/Delete', () => {
       expect(simulateKeyAction(el, 'Delete')).toBe('Delete: cursor at end, nothing to delete');
     }
   });
+
+  it('leaves non-text inputs alone, so the agent never reads back a value the field does not hold', () => {
+    for (const [type, value] of [
+      ['date', '2026-09-27'],
+      ['checkbox', 'on'],
+      ['color', '#aabbcc'],
+    ] as const) {
+      document.body.innerHTML = `<input type="${type}" value="${value}">`;
+      const el = $('input');
+      expect(simulateKeyAction(el, 'Backspace')).toBe('Backspace: dispatched event');
+      expect(simulateKeyAction(el, 'Delete')).toBe('Delete: dispatched event');
+      expect(el.value).toBe(value);
+    }
+  });
 });
 
 describe('simulateKeyAction ArrowDown/ArrowUp on a select', () => {
