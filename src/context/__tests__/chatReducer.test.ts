@@ -275,6 +275,17 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
     expect(done.messages[0]?.parts[0]).toMatchObject({ status: 'completed' });
   });
 
+  it('runs on a Firefox 111 floor, which has no Array.prototype.with', () => {
+    const withMethod = Object.getOwnPropertyDescriptor(Array.prototype, 'with');
+    Reflect.deleteProperty(Array.prototype, 'with');
+    try {
+      const opened = reduceToolProgress(runningState({ parts: [] }), 'click_element', clicking('clicking'), 'do');
+      expect(reduceToolDone(opened, 'do', { message: 'done', success: true }).task.phase).toBe('idle');
+    } finally {
+      if (withMethod) Object.defineProperty(Array.prototype, 'with', withMethod);
+    }
+  });
+
   it.each([
     ['appends the error in parentheses after the existing content', 'timed out', 'clicking the button (timed out)'],
     ['keeps the original content unchanged when there is no error text', '', 'clicking the button'],
