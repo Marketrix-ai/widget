@@ -1,7 +1,7 @@
 /**
  * Tests that `index.css` stays internally consistent: every animation, in a rule or set inline, names a
- * real keyframe, host-level rules are scoped to `:host` as well as `:root`, every class a component uses has a
- * matching rule and vice versa, and the reset selector never outranks component classes.
+ * real keyframe, no rule targets `:root`, every class a component uses has a matching rule and vice versa,
+ * and the reset selector never outranks component classes.
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -47,11 +47,8 @@ describe('every animation resolves to a keyframe this stylesheet defines', () =>
   });
 });
 
-it('scopes every host-level rule to :host as well as :root', () => {
-  const unpaired = [...css.matchAll(/(?:^|[{};])\s*([^{};]*?)\s*\{/g)]
-    .map(match => match[1] ?? '')
-    .filter(selectors => /(^|,)\s*:root\b/.test(selectors) && !selectors.includes(':host'));
-  expect(unpaired, ':root alone matches nothing inside the closed shadow root — pair it with :host').toEqual([]);
+it('never targets :root, which matches nothing inside the closed shadow root', () => {
+  expect(css).not.toMatch(/:root\b/);
 });
 
 describe('the component tree and the stylesheet name the same classes', () => {
