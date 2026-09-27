@@ -6,6 +6,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
+import { $, stubRect } from '../../test/fixtures';
 import { resetDom } from '../../test/preload';
 import { advanceTimersByTimeAsync } from '../../test/vi-compat';
 import type { domService } from '../DomService';
@@ -29,7 +30,7 @@ const makeShowFixture = (html: string) => {
 
 const show = (service: ShowModeService, id: string) =>
   service.showToolAction({
-    element: document.getElementById(id) as HTMLElement,
+    element: $(`#${id}`),
     index: 0,
     explanation: id,
     browserToolName: 'click_element',
@@ -104,7 +105,7 @@ describe('the status popup is announced', () => {
     const service = makeShowFixture('<button id="a"></button>');
     void service
       .showToolAction({
-        element: document.getElementById('a') as HTMLElement,
+        element: $('#a'),
         index: 0,
         explanation: 'Type your name',
         browserToolName: 'type_text',
@@ -175,7 +176,7 @@ describe('a non-click action settles on Continue, not on an element click', () =
 
     const settled = service
       .showToolAction({
-        element: document.getElementById('a') as HTMLElement,
+        element: $('#a'),
         index: 0,
         explanation: 'Read this step',
         browserToolName: 'type_text',
@@ -245,11 +246,11 @@ describe('the popup fit check is inclusive at every edge', () => {
       870,
     ],
   ] as const)('%s', async (_label, rect, expectedLeft, expectedTop) => {
-    Element.prototype.getBoundingClientRect = () => rect as DOMRect;
+    stubRect(rect);
 
     show(service, 'a').catch(() => undefined);
 
-    const popup = document.getElementById('marketrix-show-popup') as HTMLElement;
+    const popup = $('#marketrix-show-popup');
     expect(popup.style.left).toBe(`${expectedLeft}px`);
     expect(popup.style.top).toBe(`${expectedTop}px`);
   });
@@ -285,7 +286,7 @@ describe('a show action the page invalidates', () => {
 
   it('stops at off-screen without also checking interactability on the same tick', async () => {
     notInteractableReason.mockClear();
-    Element.prototype.getBoundingClientRect = () => ({ bottom: -10, top: -10, right: -10, left: -10 }) as DOMRect;
+    stubRect({ bottom: -10, top: -10, right: -10, left: -10 });
 
     const rejection = show(service, 'a').then(
       () => 'resolved',

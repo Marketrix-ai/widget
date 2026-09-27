@@ -12,11 +12,7 @@ Object.defineProperty(HTMLElement.prototype, 'offsetParent', { configurable: tru
 
 const render = (): [HTMLElement, HTMLElement, HTMLElement] => {
   document.body.innerHTML = '<button id="a"></button><button id="b"></button><button id="c"></button>';
-  return ['a', 'b', 'c'].map(id => document.getElementById(id) as HTMLElement) as [
-    HTMLElement,
-    HTMLElement,
-    HTMLElement,
-  ];
+  return [$('#a'), $('#b'), $('#c')];
 };
 
 afterEach(() => {
@@ -52,11 +48,11 @@ describe('simulateKeyAction Backspace/Delete', () => {
     return el;
   };
 
-  it.each(['input', 'textarea'])(
+  it.each<'input' | 'textarea'>(['input', 'textarea'])(
     'writes through the same prototype setter for %s, so a controlled component observes it identically',
     tag => {
       document.body.innerHTML = `<${tag}></${tag}>`;
-      const el = document.querySelector(tag) as HTMLInputElement | HTMLTextAreaElement;
+      const el = $(tag);
       el.value = 'abcd';
       el.setSelectionRange(3, 3);
 
@@ -139,8 +135,8 @@ describe('simulateKeyAction Enter', () => {
   const inForm = (field: string) => {
     document.body.innerHTML = `<form>${field}<button type="submit"></button></form>`;
     const submits: string[] = [];
-    document.querySelector('button')!.addEventListener('click', () => submits.push('submit'));
-    document.querySelector('form')!.addEventListener('submit', e => e.preventDefault());
+    $('button').addEventListener('click', () => submits.push('submit'));
+    $('form').addEventListener('submit', e => e.preventDefault());
     return submits;
   };
 

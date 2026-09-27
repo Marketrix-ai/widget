@@ -40,7 +40,7 @@ describe('a host page that denies localStorage outright', () => {
 
     openWidget();
     openChatTab();
-    const composer = screen.getByPlaceholderText('Ask anything') as HTMLTextAreaElement;
+    const composer = screen.getByPlaceholderText('Ask anything');
 
     fireEvent.change(composer, { target: { value: 'does this still work without storage?' } });
     fireEvent.keyDown(composer, { key: 'Enter' });

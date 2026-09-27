@@ -5,6 +5,7 @@
  */
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
+import { $ } from '../../../test/fixtures';
 import { NotificationProvider, WidgetNotifications } from '../Notifications';
 
 const noop = () => {};
@@ -22,7 +23,7 @@ describe('WidgetNotifications', () => {
     expect(await screen.findAllByText('Something failed')).toHaveLength(2);
     expect(screen.getByRole('alert', { hidden: true })).toHaveTextContent('Something failed');
 
-    fireEvent.click(document.querySelector('[aria-label="Dismiss"]') as HTMLElement);
+    fireEvent.click($('[aria-label="Dismiss"]'));
     await waitFor(() => expect(onClearError).toHaveBeenCalledTimes(1));
   });
 

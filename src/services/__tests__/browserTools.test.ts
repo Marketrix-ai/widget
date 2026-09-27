@@ -184,19 +184,22 @@ describe('a Do tool call against a missing index fails typed, never throws', () 
 });
 
 describe('typeText writes through the same native setter for input and textarea', () => {
-  it.each(['input', 'textarea'])('produces identical resulting value and event order for %s', async tag => {
-    document.body.innerHTML = `<${tag} style="position: fixed"></${tag}>`;
-    const element = document.querySelector(tag) as HTMLInputElement | HTMLTextAreaElement;
-    vi.spyOn(domService, 'getValidatedElement').mockReturnValue({ element });
-    const seen: string[] = [];
-    for (const type of ['input', 'change', 'blur']) element.addEventListener(type, e => seen.push(e.type));
+  it.each<'input' | 'textarea'>(['input', 'textarea'])(
+    'produces identical resulting value and event order for %s',
+    async tag => {
+      document.body.innerHTML = `<${tag} style="position: fixed"></${tag}>`;
+      const element = $(tag);
+      vi.spyOn(domService, 'getValidatedElement').mockReturnValue({ element });
+      const seen: string[] = [];
+      for (const type of ['input', 'change', 'blur']) element.addEventListener(type, e => seen.push(e.type));
 
-    const result = await executeTool('type_text', { index: 0, text: 'hello', clear: true }, 'do');
+      const result = await executeTool('type_text', { index: 0, text: 'hello', clear: true }, 'do');
 
-    expect(result.success).toBe(true);
-    expect(element.value).toBe('hello');
-    expect(seen).toEqual(['input', 'change', 'blur']);
-  });
+      expect(result.success).toBe(true);
+      expect(element.value).toBe('hello');
+      expect(seen).toEqual(['input', 'change', 'blur']);
+    },
+  );
 });
 
 describe("show mode's real visitor click reaches the element's handler exactly once", () => {
