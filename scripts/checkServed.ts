@@ -1,7 +1,8 @@
 /**
  * `bun run check:served` — checks what the runtime image actually sends a customer host over real HTTP.
  * Boots the `runtime` Docker image and fails without docker; `TARGET_URL` points the checks at a deployed
- * host and `EXPECTED_TAG` also asserts the served bundle matches a source build of that tag. Expected headers are read from `nginx.conf` so they cannot drift.
+ * host and `EXPECTED_TAG` also asserts the served bundle matches a source build of that tag. Expected headers
+ * are read from `nginx.conf` so they cannot drift.
  */
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';

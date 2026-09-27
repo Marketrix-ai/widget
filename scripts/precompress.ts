@@ -1,10 +1,7 @@
 /**
- * Writes `<file>.gz`/`<file>.br` beside a built artifact, matching exactly what the runtime image
- * serves — the ONE home for the gzip/brotli parameters (level 9, brotli quality 11 with a size hint),
- * called from the Dockerfile `builder` stage (`bun run precompress dist/widget.mjs`) and from
- * `checkServed.ts`'s no-docker fallback server, so the two never drift into different compression
- * settings for the same negotiation `checkServed.ts` asserts against. Bun's own `node:zlib` is used
- * (no node binary exists in the `builder` stage), so this runs under `bun run`, never plain `node`.
+ * Writes `<file>.gz`/`<file>.br` beside a built artifact for the Dockerfile `builder` stage and for
+ * `checkServed.ts`'s length checks — the one home for the gzip/brotli parameters the runtime image serves.
+ * It uses Bun's `node:zlib`, since the `builder` stage has no node binary.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { brotliCompressSync, constants, gzipSync } from 'node:zlib';
