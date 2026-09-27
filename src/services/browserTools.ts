@@ -21,8 +21,10 @@ type ToolExecutionResult<T extends WidgetToolResult = { text: string }> =
 
 export type WidgetToolCall = Extract<WidgetEvent, { type: 'tool/call' }>;
 export type WidgetToolName = WidgetToolCall['browser_tool'];
-type ToolArgMap = { [K in WidgetToolName]: Extract<WidgetToolCall, { browser_tool: K }>['args'] };
-export type ToolArgs<K extends WidgetToolName> = ToolArgMap[K];
+export type ToolArgs<K extends WidgetToolName> = Extract<WidgetToolCall, { browser_tool: K }>['args'];
+type ToolHandler<K extends WidgetToolName> = (
+  args: ToolArgs<K>,
+) => ToolExecutionResult<WidgetToolResult> | Promise<ToolExecutionResult<WidgetToolResult>>;
 
 const ok = (text: string): ToolExecutionResult => ({ success: true, result: { text } });
 const okResult = <T extends WidgetToolResult>(result: T): ToolExecutionResult<T> => ({ success: true, result });
@@ -233,11 +235,7 @@ async function getScreenshot(): Promise<ToolExecutionResult> {
   }
 }
 
-const TOOLS: {
-  [K in WidgetToolName]: (
-    args: ToolArgMap[K],
-  ) => ToolExecutionResult<WidgetToolResult> | Promise<ToolExecutionResult<WidgetToolResult>>;
-} = {
+const TOOLS: { [K in WidgetToolName]: ToolHandler<K> } = {
   navigate,
   search,
   click_element: clickElement,
@@ -262,9 +260,7 @@ export async function executeTool<K extends WidgetToolName>(
   mode: WidgetToolCall['mode'],
   explanation?: string,
 ): Promise<ToolExecutionResult<WidgetToolResult>> {
-  const run: (
-    args: ToolArgs<K>,
-  ) => ToolExecutionResult<WidgetToolResult> | Promise<ToolExecutionResult<WidgetToolResult>> = TOOLS[browserToolName];
+  const run: ToolHandler<K> = TOOLS[browserToolName];
   try {
     if (mode === 'show' && waitsForUser(browserToolName) && 'index' in args) {
       await showModeService.showToolAction({

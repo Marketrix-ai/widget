@@ -22,7 +22,7 @@ export class RrwebSessionRecorder {
   private events: RrwebEvent[] = [];
   private sessionId = randomId();
   private stopRecording: ReturnType<typeof record> | null = null;
-  private flushTimer: ReturnType<typeof setTimeout> | null = null;
+  private flushTimer: ReturnType<typeof setTimeout> | undefined;
   private flushPromise = Promise.resolve();
   private stopped = false;
   private failedFlushes = 0;
@@ -88,8 +88,8 @@ export class RrwebSessionRecorder {
     onError: (error: Error) => {
       if (!(error instanceof StreamGaveUpError)) return;
       this.streamGaveUp = true;
-      if (this.flushTimer) clearTimeout(this.flushTimer);
-      this.flushTimer = null;
+      clearTimeout(this.flushTimer);
+      this.flushTimer = undefined;
     },
   };
 
@@ -124,8 +124,8 @@ export class RrwebSessionRecorder {
     streamClient.removeCallbacks(this.callbacks);
     this.stopRecording?.();
     this.stopRecording = null;
-    if (this.flushTimer) clearTimeout(this.flushTimer);
-    this.flushTimer = null;
+    clearTimeout(this.flushTimer);
+    this.flushTimer = undefined;
     void this.flush();
   }
 
@@ -135,8 +135,8 @@ export class RrwebSessionRecorder {
 
   private flush(): Promise<void> {
     this.flushPromise = this.flushPromise.then(async () => {
-      if (this.flushTimer) clearTimeout(this.flushTimer);
-      this.flushTimer = null;
+      clearTimeout(this.flushTimer);
+      this.flushTimer = undefined;
       const events = this.events.splice(0);
       if (!events.length) return;
       try {

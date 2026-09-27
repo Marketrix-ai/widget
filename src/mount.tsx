@@ -12,8 +12,10 @@ import { NotificationProvider, WidgetNotifications } from './components/blocks/N
 import { WidgetRoot } from './components/WidgetRoot';
 import { WidgetProviders } from './context/WidgetProviders';
 import type { NotificationTone } from './design-system/component-tokens';
+import { themeCssProperties } from './design-system/semantic-tokens';
 import shadowStyles from './index.css?inline';
 import { configureSdk } from './sdk';
+import { DEFAULT_WIDGET_SETTINGS } from './sdk/contracts/widgetSettings';
 import { getOrCreateChatId } from './services/chatThread';
 import { RrwebSessionRecorder } from './services/RrwebSessionRecorder';
 import { stopScreenShare } from './services/ScreenShareService';
@@ -192,6 +194,9 @@ function showHostPageNotice(message: string, tone: NotificationTone, styleNonce:
   document.body.appendChild(noticeContainer);
 
   const { mountEl } = attachShadowMount(noticeContainer, 'marketrix-widget-notice-root', styleNonce);
+  for (const [name, value] of Object.entries(themeCssProperties(DEFAULT_WIDGET_SETTINGS))) {
+    mountEl.style.setProperty(name, String(value));
+  }
 
   noticeRoot = createRoot(mountEl);
   noticeRoot.render(

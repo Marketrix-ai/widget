@@ -114,10 +114,7 @@ export const animateSnap = (
   const done = () => {
     if (finished) return;
     detach();
-    wrapper.style.transition = 'none';
-    wrapper.style.willChange = '';
-    wrapper.style.left = '';
-    wrapper.style.top = '';
+    Object.assign(wrapper.style, { transition: 'none', willChange: '', left: '', top: '' });
     onSettled();
     requestAnimationFrame(() => {
       wrapper.style.transition = '';
@@ -128,15 +125,19 @@ export const animateSnap = (
   };
   const fallbackTimer = window.setTimeout(done, SNAP_DURATION_MS + 50);
   wrapper.addEventListener('transitionend', onEnd);
-  wrapper.style.transition = 'none';
-  wrapper.style.transform = 'none';
-  wrapper.style.willChange = 'left, top';
-  wrapper.style.left = `${from.x}px`;
-  wrapper.style.top = `${from.y}px`;
+  Object.assign(wrapper.style, {
+    transition: 'none',
+    transform: 'none',
+    willChange: 'left, top',
+    left: `${from.x}px`,
+    top: `${from.y}px`,
+  });
   requestAnimationFrame(() => {
-    wrapper.style.transition = `left ${SNAP_DURATION_MS}ms ${SNAP_EASING}, top ${SNAP_DURATION_MS}ms ${SNAP_EASING}`;
-    wrapper.style.left = `${to.x}px`;
-    wrapper.style.top = `${to.y}px`;
+    Object.assign(wrapper.style, {
+      transition: `left ${SNAP_DURATION_MS}ms ${SNAP_EASING}, top ${SNAP_DURATION_MS}ms ${SNAP_EASING}`,
+      left: `${to.x}px`,
+      top: `${to.y}px`,
+    });
   });
   return detach;
 };

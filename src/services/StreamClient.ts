@@ -26,8 +26,8 @@ interface StreamRoute {
 }
 
 interface StreamClientCallbacks {
-  onMessage?: (event: WidgetEvent) => void;
-  onError?: (error: Error) => void;
+  onMessage: (event: WidgetEvent) => void;
+  onError: (error: Error) => void;
 }
 
 class StreamClient {
@@ -39,7 +39,7 @@ class StreamClient {
   private tornDown = false;
   private credentialRejected = false;
   private reconnectAttempts = 0;
-  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private reconnectTimer: ReturnType<typeof setTimeout> | undefined;
   private connectionId = 0;
   private registrationWaiters = new Set<{ resolve: () => void; reject: (error: Error) => void }>();
 
@@ -69,7 +69,7 @@ class StreamClient {
 
   reconnectNow(): void {
     if (!this.canReconnect() || this.chatId === null) return;
-    this.clearReconnectTimer();
+    clearTimeout(this.reconnectTimer);
     this.reconnectAttempts = 0;
     this.abortConnection();
     void this.connect(this.chatId);
@@ -154,7 +154,7 @@ class StreamClient {
   disconnect(): void {
     this.tornDown = true;
     this.credentialRejected = false;
-    this.clearReconnectTimer();
+    clearTimeout(this.reconnectTimer);
     this.abortConnection();
     this.chatId = null;
     this.settleWaiters(new Error('Stream disconnected before registration'));
@@ -177,7 +177,7 @@ class StreamClient {
   }
 
   private notifyError(error: Error): void {
-    this.callbacks.forEach(cb => cb.onError?.(error));
+    this.callbacks.forEach(cb => cb.onError(error));
   }
 
   private settleWaiters(error?: Error): void {
@@ -214,7 +214,7 @@ class StreamClient {
 
     for (const cb of this.callbacks) {
       try {
-        cb.onMessage?.(event);
+        cb.onMessage(event);
       } catch (error) {
         console.error(`[StreamClient] A subscriber failed handling ${event.type}:`, error);
       }
@@ -226,7 +226,7 @@ class StreamClient {
       this.giveUp('Could not reconnect to the assistant. Try again.');
       return;
     }
-    this.clearReconnectTimer();
+    clearTimeout(this.reconnectTimer);
     this.reconnectAttempts++;
     const delay = Math.min(INITIAL_RECONNECT_DELAY_MS * 2 ** (this.reconnectAttempts - 1), MAX_RECONNECT_DELAY_MS);
     const jittered = delay / 2 + Math.random() * (delay / 2);
@@ -241,13 +241,6 @@ class StreamClient {
     this.abortController?.abort();
     this.abortController = null;
     this.status = 'disconnected';
-  }
-
-  private clearReconnectTimer(): void {
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = null;
-    }
   }
 }
 

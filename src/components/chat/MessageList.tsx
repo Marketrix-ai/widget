@@ -7,13 +7,13 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import { SHADOW } from '../../design-system/component-tokens';
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
-import type { ChatMessage } from '../../types';
 import { createAgentMessage, messageText } from '../../utils/chat';
 import { addOpacity, backgroundGradient } from '../../utils/color';
 import { Button } from '../base/Button';
 import { Flex } from '../base/Flex';
 import { Icon } from '../base/Icon';
 import { IconButton } from '../base/IconButton';
+import type { IconName } from '../base/icons';
 import { Surface } from '../base/Surface';
 import { Text } from '../base/Text';
 import { MessageItem } from './MessageItem';
@@ -84,7 +84,7 @@ export const MessageList = () => {
           scrollbarWidth: 'thin',
         }}
       >
-        {allMessages.map((message: ChatMessage, index: number) => (
+        {allMessages.map((message, index) => (
           <MessageItem
             key={message.id}
             message={message}
@@ -106,22 +106,25 @@ export const MessageList = () => {
         )}
       </Surface>
 
-      {[
-        {
-          show: showScrollTop,
-          edge: { top: '8px' },
-          label: 'Scroll to top',
-          icon: 'arrowUp' as const,
-          onClick: () => containerRef.current?.scrollTo({ top: 0, behavior: 'smooth' }),
-        },
-        {
-          show: showScrollBottom,
-          edge: { bottom: '8px' },
-          label: 'Scroll to bottom',
-          icon: 'arrowDown' as const,
-          onClick: () => containerRef.current?.scrollTo({ top: containerRef.current.scrollHeight, behavior: 'smooth' }),
-        },
-      ].map(
+      {(
+        [
+          {
+            show: showScrollTop,
+            edge: { top: '8px' },
+            label: 'Scroll to top',
+            icon: 'arrowUp',
+            onClick: () => containerRef.current?.scrollTo({ top: 0, behavior: 'smooth' }),
+          },
+          {
+            show: showScrollBottom,
+            edge: { bottom: '8px' },
+            label: 'Scroll to bottom',
+            icon: 'arrowDown',
+            onClick: () =>
+              containerRef.current?.scrollTo({ top: containerRef.current.scrollHeight, behavior: 'smooth' }),
+          },
+        ] satisfies { show: boolean; edge: React.CSSProperties; label: string; icon: IconName; onClick: () => void }[]
+      ).map(
         ({ show, edge, label, icon, onClick }) =>
           show && (
             <Flex

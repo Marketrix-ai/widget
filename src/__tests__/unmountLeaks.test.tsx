@@ -17,7 +17,7 @@ import { writeChatSnapshot } from '../services/StorageService';
 import { streamClient } from '../services/StreamClient';
 import * as WidgetService from '../services/WidgetService';
 import { $, credentialedConfig } from '../test/fixtures';
-import { renderWidget } from '../test/renderWidget';
+import { dragFabAndResize, renderWidget } from '../test/renderWidget';
 import { mocked, mockSdkModule, restoreModuleAfterAll } from '../test/vi-compat';
 
 vi.mock('@rrweb/record', () => ({ record: vi.fn(() => vi.fn()) }));
@@ -149,18 +149,7 @@ describe('component-tree unmount releases everything WidgetRoot registered on wi
     fireEvent.keyDown(composer, { key: 'Enter' });
     await waitFor(() => expect(scope.getByText('hello from a leak test')).toBeInTheDocument());
 
-    const fab = result.container.querySelector('.mtx-fab-trigger') as HTMLElement;
-    fab.setPointerCapture = () => {};
-    fab.releasePointerCapture = () => {};
-    fireEvent.pointerDown(fab, { pointerId: 1, clientX: 0, clientY: 0 });
-    fireEvent.pointerMove(fab, { pointerId: 1, clientX: 40, clientY: 40 });
-    fireEvent.pointerUp(fab, { pointerId: 1, clientX: 40, clientY: 40 });
-
-    const grip = result.container.querySelector('[role="separator"]') as HTMLElement | null;
-    if (grip) {
-      fireEvent.mouseDown(grip, { clientX: 100, clientY: 100 });
-      fireEvent.mouseMove(document, { clientX: 120, clientY: 130 });
-    }
+    dragFabAndResize(result.container, { releaseGrip: false });
 
     result.unmount();
     await new Promise(resolve => setTimeout(resolve, 0));

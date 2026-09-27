@@ -4,7 +4,7 @@
  * `InitBridge` restores the stored snapshot and opens the stream, `PersistBridge` writes it back; task state is
  * never restored, since a run never survives a reload. Preview mode skips both.
  */
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useEffect, useState } from 'react';
 
 import { useWidgetConfig, WidgetConfigContext } from '../hooks/useWidget';
 import { getOrCreateChatId } from '../services/chatThread';
@@ -15,8 +15,6 @@ import { ChatProvider, useChatContext } from './ChatContext';
 import { UIStateProvider, useUIStateContext } from './UIStateContext';
 
 export const PortalContainerContext = createContext<HTMLElement | null>(null);
-
-export const usePortalContainer = (): HTMLElement => useContext(PortalContainerContext) ?? document.body;
 
 const PersistBridge: React.FC = () => {
   const { uiState } = useUIStateContext();

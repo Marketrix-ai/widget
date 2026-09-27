@@ -8,9 +8,9 @@
  * root and would otherwise hand focus back to the host page on close.
  */
 import { Dialog } from '@base-ui/react/dialog';
-import React from 'react';
+import React, { useContext } from 'react';
 
-import { usePortalContainer } from '../../context/WidgetProviders';
+import { PortalContainerContext } from '../../context/WidgetProviders';
 import { getElevationStyle, LAYER_TOKENS } from '../../design-system/component-tokens';
 import { SCREEN_ACCESS_DETAIL, SCREEN_ACCESS_PROMPT } from '../../utils/chat';
 import { Button } from '../base/Button';
@@ -23,7 +23,7 @@ interface ScreenAccessDialogProps {
 }
 
 export const ScreenAccessDialog: React.FC<ScreenAccessDialogProps> = ({ onClose, onConfirm, finalFocusRef }) => {
-  const portalContainer = usePortalContainer();
+  const portalContainer = useContext(PortalContainerContext) ?? document.body;
 
   return (
     <Dialog.Root

@@ -1,7 +1,8 @@
 /**
  * Tests for the widget's entry paths: the classic loader adds its React import map only when the host's
  * lacks one and injects the module script with the `mtx-*` attributes, a direct module script auto-initializes from its `mtx-*` attributes and
- * requires an API host, and every mounted widget gets its CSS inside the closed shadow root.
+ * requires an API host, every mounted widget gets its CSS inside the closed shadow root, and the host-page notice
+ * carries every theme token that CSS reads.
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -183,6 +184,19 @@ describe('widget public entry paths', () => {
     );
     expect(bare).toBe('');
     expect(nonced).toBe('csp-nonce-123');
+  });
+
+  it('defines every token the stylesheet reads on the host-page notice, so its toasts theme and animate', async () => {
+    const css = readFileSync(resolve(process.cwd(), 'src/index.css'), 'utf8');
+    const declared = new Set([...css.matchAll(/(--[\w-]+):[^;!]*;/g)].map(match => match[1]));
+    appendModuleScript({ 'mtx-id': 'widget-id', 'mtx-key': 'widget-key' });
+    const attach = vi.spyOn(HTMLElement.prototype, 'attachShadow');
+    await runAutoInit();
+
+    const notice = (attach.mock.results[0]?.value as ShadowRoot).querySelector('#marketrix-widget-notice-root');
+    const read = [...new Set([...css.matchAll(/var\((--[\w-]+)/g)].map(match => match[1] ?? ''))];
+    const missing = read.filter(name => !declared.has(name) && !notice?.getAttribute('style')?.includes(`${name}:`));
+    expect(missing).toEqual([]);
   });
 
   it.each([

@@ -7,7 +7,7 @@
  */
 
 import { getSdk, type WidgetClient, type WidgetEvent } from '../../sdk';
-import { flushMicrotasks } from '../../test/fixtures';
+import { asStreamClientInternals, flushMicrotasks } from '../../test/fixtures';
 import { advanceTimersByTimeAsync, mocked, mockSdkModule, restoreModuleAfterAll, waitFor } from '../../test/vi-compat';
 import { streamClient, StreamGaveUpError } from '../StreamClient';
 
@@ -17,21 +17,6 @@ vi.mock('../../sdk', () => mockSdkModule({ widgetStream: vi.fn(), widgetMessageP
 restoreModuleAfterAll('../../sdk', () => import('../../sdk/index.ts?real'));
 
 const mockSdk = mocked(getSdk());
-
-interface StreamClientInternals {
-  chatId: StreamClient['chatId'];
-  status: StreamClient['status'];
-  tornDown: StreamClient['tornDown'];
-  credentialRejected: StreamClient['credentialRejected'];
-  reconnectAttempts: StreamClient['reconnectAttempts'];
-  scheduleReconnect: StreamClient['scheduleReconnect'];
-  handleMessage: StreamClient['handleMessage'];
-  isConnected: StreamClient['isConnected'];
-}
-
-function internals(client: StreamClient): StreamClientInternals {
-  return client as unknown as StreamClientInternals;
-}
 
 type MockedStream = Awaited<ReturnType<WidgetClient['widgetStream']>>;
 
@@ -59,9 +44,12 @@ function freshClient(): StreamClient {
   return streamClient;
 }
 
-function freshChatClient(status?: StreamClient['status']): { client: StreamClient; inner: StreamClientInternals } {
+function freshChatClient(status?: StreamClient['status']): {
+  client: StreamClient;
+  inner: ReturnType<typeof asStreamClientInternals>;
+} {
   const client = freshClient();
-  const inner = internals(client);
+  const inner = asStreamClientInternals();
   inner.chatId = 'chat-1';
   inner.tornDown = false;
   if (status !== undefined) inner.status = status;
@@ -134,7 +122,7 @@ describe('StreamClient registration lifecycle', () => {
 
     await expect(registration).rejects.toThrow('Stream disconnected before registration');
 
-    const inner = internals(client);
+    const inner = asStreamClientInternals();
     inner.chatId = 'new-chat';
     inner.tornDown = false;
     const { registration: remountRegistration } = await awaitingRegistration(client, 'new-chat');
@@ -164,7 +152,7 @@ describe('StreamClient registration lifecycle', () => {
 
   it('a rejected credential outlives connect, and a send cannot wait on a registration that will never come', async () => {
     const client = freshClient();
-    const inner = internals(client);
+    const inner = asStreamClientInternals();
     inner.chatId = 'chat-auth';
     inner.status = 'open';
     inner.tornDown = false;
@@ -181,9 +169,9 @@ describe('StreamClient registration lifecycle', () => {
   });
 
   it('does not report a stream that has only reached open as connected', () => {
-    const { client } = freshChatClient('open');
+    freshChatClient('open');
 
-    expect(internals(client).isConnected()).toBe(false);
+    expect(asStreamClientInternals().isConnected()).toBe(false);
   });
 
   it('leaves an open-but-unregistered stream still pending, so a send cannot outrun registration', async () => {
@@ -220,7 +208,7 @@ describe('StreamClient guard conditions', () => {
   it('a chat/error that is not the auth one leaves credentials untouched and reconnection still possible', () => {
     const { client, inner } = freshChatClient('open');
     const errors: Error[] = [];
-    client.addCallbacks({ onError: e => errors.push(e) });
+    client.addCallbacks({ onMessage: () => {}, onError: e => errors.push(e) });
 
     inner.handleMessage({ type: 'chat/error', request_id: 'req-123', error: 'boom' });
 
@@ -236,12 +224,12 @@ describe('StreamClient guard conditions', () => {
     await client.connect('chat-1');
     expect(mockSdk.widgetStream).toHaveBeenCalledTimes(1);
 
-    internals(client).tornDown = true;
+    asStreamClientInternals().tornDown = true;
     mockSdk.widgetStream.mockResolvedValue(emptyStream());
     await advanceTimersByTimeAsync(1000);
 
     expect(mockSdk.widgetStream).toHaveBeenCalledTimes(1);
-    internals(client).tornDown = false;
+    asStreamClientInternals().tornDown = false;
     client.disconnect();
     vi.useRealTimers();
   });
@@ -282,7 +270,7 @@ describe('StreamClient retry affordance', () => {
   it('canReconnect is false once auth is rejected — retrying only re-earns the 401', async () => {
     const client = freshClient();
     const errors: string[] = [];
-    const callbacks = { onError: (e: Error) => errors.push(e.message) };
+    const callbacks = { onMessage: () => {}, onError: (e: Error) => errors.push(e.message) };
     client.addCallbacks(callbacks);
     mockSdk.widgetStream.mockResolvedValue(
       asMockedStream({
@@ -342,7 +330,7 @@ describe('StreamClient fault injection', () => {
     await flushMicrotasks();
 
     const received: WidgetEvent[] = [];
-    const callbacks = { onMessage: (e: WidgetEvent) => received.push(e) };
+    const callbacks = { onMessage: (e: WidgetEvent) => received.push(e), onError: () => {} };
     client.addCallbacks(callbacks);
 
     const second = controlledStream();
@@ -375,7 +363,7 @@ describe('StreamClient fault injection', () => {
     expect(mockSdk.widgetStream).toHaveBeenCalledTimes(1);
 
     const errors: Error[] = [];
-    client.addCallbacks({ onError: e => errors.push(e) });
+    client.addCallbacks({ onMessage: () => {}, onError: e => errors.push(e) });
 
     for (const [i, base] of baseDelays.entries()) {
       await advanceTimersByTimeAsync(base / 2 - 1);
@@ -432,8 +420,9 @@ describe('StreamClient fault injection', () => {
       onMessage: () => {
         throw new Error('subscriber bug');
       },
+      onError: () => {},
     };
-    const listening = { onMessage: (e: WidgetEvent) => received.push(e) };
+    const listening = { onMessage: (e: WidgetEvent) => received.push(e), onError: () => {} };
     client.addCallbacks(throwing);
     client.addCallbacks(listening);
 
@@ -441,7 +430,7 @@ describe('StreamClient fault injection', () => {
     stream.push({ type: 'chat/response', request_id: 'req-1', text: 'still here' });
     await waitFor(() => expect(received).toHaveLength(2));
 
-    expect(internals(client).status).toBe('registered');
+    expect(asStreamClientInternals().status).toBe('registered');
     expect(mockSdk.widgetStream).toHaveBeenCalledTimes(1);
     expect(consoleError).toHaveBeenCalledTimes(2);
 
