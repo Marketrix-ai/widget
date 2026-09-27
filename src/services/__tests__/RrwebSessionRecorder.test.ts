@@ -22,6 +22,13 @@ restoreModuleAfterAll('../../sdk', () => import('../../sdk/index.ts?real'));
 
 const mockSdk = mocked(getSdk());
 
+const lastPostedEvents = () => {
+  const command = mockSdk.widgetMessagePost.mock.lastCall?.[0].command;
+  if (command?.type !== 'rrweb/events')
+    throw new Error(`last post was ${command?.type ?? 'nothing'}, not rrweb/events`);
+  return command.events;
+};
+
 beforeEach(() => {
   vi.spyOn(streamClient, 'ready').mockResolvedValue();
 });
@@ -94,12 +101,10 @@ describe('a flush the api rejects', () => {
     emit(incrementalEvent(99_999));
     await advanceTimersByTimeAsync(500);
 
-    const posted = mockSdk.widgetMessagePost.mock.lastCall?.[0].command as {
-      events: Array<{ type: number; timestamp: number }>;
-    };
-    expect(posted.events).toHaveLength(20_000);
-    expect(posted.events.slice(0, 2).map(event => event.type)).toEqual([EventType.Meta, EventType.FullSnapshot]);
-    expect(posted.events[posted.events.length - 1]?.timestamp).toBe(19_999);
+    const events = lastPostedEvents();
+    expect(events).toHaveLength(20_000);
+    expect(events.slice(0, 2).map(event => event.type)).toEqual([EventType.Meta, EventType.FullSnapshot]);
+    expect(events[events.length - 1]?.timestamp).toBe(19_999);
     vi.useRealTimers();
   });
 
@@ -112,11 +117,9 @@ describe('a flush the api rejects', () => {
 
     await advanceTimersByTimeAsync(500);
 
-    const posted = mockSdk.widgetMessagePost.mock.lastCall?.[0].command as {
-      events: RrwebEvent[];
-    };
+    const events = lastPostedEvents();
     expect(mockSdk.widgetMessagePost).toHaveBeenCalledTimes(3);
-    expect(posted.events).toEqual([metaEvent(0)]);
+    expect(events).toEqual([metaEvent(0)]);
     vi.useRealTimers();
   });
 });
@@ -156,9 +159,9 @@ describe('a flush that keeps failing', () => {
     mockSdk.widgetMessagePost.mockResolvedValueOnce({ success: true });
     asStreamClientInternals().handleMessage({ type: 'registered', chat_id: 'chat-1' });
     await flushMicrotasks();
-    const posted = mockSdk.widgetMessagePost.mock.lastCall?.[0].command as { events: RrwebEvent[] };
+    const events = lastPostedEvents();
     expect(mockSdk.widgetMessagePost).toHaveBeenCalledTimes(3);
-    expect(posted.events).toEqual([metaEvent(0), incrementalEvent(1)]);
+    expect(events).toEqual([metaEvent(0), incrementalEvent(1)]);
     recorder.stop();
     vi.useRealTimers();
   });
@@ -175,8 +178,8 @@ describe('a recorder whose stream has given up', () => {
     asStreamClientInternals().handleMessage({ type: 'registered', chat_id: 'chat-1' });
     await flushMicrotasks();
 
-    const posted = mockSdk.widgetMessagePost.mock.lastCall?.[0].command as { events: RrwebEvent[] };
-    expect(posted.events).toHaveLength(20_000);
+    const events = lastPostedEvents();
+    expect(events).toHaveLength(20_000);
     recorder.stop();
     vi.useRealTimers();
   });
@@ -250,10 +253,8 @@ describe('RrwebSessionRecorder.stop', () => {
     recorder.stop();
     await flushMicrotasks();
 
-    const posted = mockSdk.widgetMessagePost.mock.lastCall?.[0].command as {
-      events: RrwebEvent[];
-    };
-    expect(posted.events).toEqual([metaEvent(0)]);
+    const events = lastPostedEvents();
+    expect(events).toEqual([metaEvent(0)]);
   });
 });
 
