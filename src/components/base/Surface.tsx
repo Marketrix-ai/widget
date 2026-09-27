@@ -15,7 +15,7 @@ export interface SurfaceProps extends LayoutProps, React.HTMLAttributes<HTMLElem
   ref?: Ref<HTMLDivElement>;
 }
 
-export const CARD_COLORS: CSSProperties = { backgroundColor: 'var(--card)', color: 'var(--card-foreground)' };
+export const CARD_COLORS: CSSProperties = { backgroundColor: 'var(--card)', color: 'var(--foreground)' };
 const FLOATING_CARD = { border: true, elevation: 'card', rounded: 'xl' } satisfies SurfaceProps;
 const FLOATING_CARD_STYLE: CSSProperties = { ...CARD_COLORS, padding: '8px 12px', margin: '0 12px 12px 12px' };
 
