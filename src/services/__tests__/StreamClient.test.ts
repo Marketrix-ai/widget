@@ -69,10 +69,14 @@ function controlledStream(): ControlledStream {
   let closed: 'ended' | Error | null = null;
 
   const settleNext = () => {
-    if (pending.length === 0) return;
-    if (queue.length > 0) pending.shift()!.resolve({ value: queue.shift()!, done: false });
-    else if (closed === 'ended') pending.shift()!.resolve({ value: undefined, done: true });
-    else if (closed) pending.shift()!.reject(closed);
+    const next = pending[0];
+    if (!next) return;
+    const value = queue.shift();
+    if (value) next.resolve({ value, done: false });
+    else if (closed === 'ended') next.resolve({ value: undefined, done: true });
+    else if (closed) next.reject(closed);
+    else return;
+    pending.shift();
   };
 
   const stream = asMockedStream({

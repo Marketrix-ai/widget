@@ -151,7 +151,7 @@ describe('answering a screen-access request', () => {
 
     expect(ofKind(chat().messages[1], 'screenAccess').screenShareStatus).toBe('denied');
     expect(chat().messages.map(m => m.kind)).toEqual(['user', 'screenAccess', 'system', 'agent']);
-    expect(messageText(chat().messages[2]!.parts)).toBe(
+    expect(messageText(ofKind(chat().messages[2], 'system').parts)).toBe(
       'Screen sharing could not start, so the assistant will continue without it.',
     );
   });
@@ -167,7 +167,7 @@ describe('answering a screen-access request', () => {
     act(() => ScreenShareService.stopScreenShare());
 
     expect(chat().messages.some(m => m.kind === 'screenshare')).toBe(false);
-    expect(messageText(chat().messages.at(-1)!.parts)).toBe('Screen sharing stopped');
+    expect(messageText(ofKind(chat().messages.at(-1), 'system').parts)).toBe('Screen sharing stopped');
   });
 });
 

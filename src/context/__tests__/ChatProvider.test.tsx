@@ -218,7 +218,7 @@ describe('commit skips the render for a transition that reports no change', () =
     await act(async () => {
       await chat().chatActions.sendTurn('do the thing', 'tell');
     });
-    const placeholderId = chat().messages[chat().messages.length - 1]?.id as string;
+    const placeholderId = chat().messages.at(-1)?.id;
 
     act(() => {
       asStreamClientInternals().handleMessage({ type: 'task/status', status: 'has_question' });
@@ -293,7 +293,7 @@ describe('a real turn', () => {
 
     const placeholder = chat().messages.find(isPending);
     expect(order).toEqual(['ready', 'send']);
-    expect(send).toHaveBeenCalledWith({ type: 'chat/tell', request_id: placeholder!.id, content: 'hello' });
+    expect(send).toHaveBeenCalledWith({ type: 'chat/tell', request_id: placeholder?.id, content: 'hello' });
   });
 });
 
@@ -607,9 +607,7 @@ describe('two independent turns settle into their own messages', () => {
       asStreamClientInternals().handleMessage({ type: 'chat/response', request_id: 'req-b', text: 'second' });
     });
 
-    const first = chat().messages.find(msg => msg.id === 'req-a');
-    const second = chat().messages.find(msg => msg.id === 'req-b');
-    expect(messageText(first!.parts)).toBe('first');
-    expect(messageText(second!.parts)).toBe('second');
+    const replies = chat().messages.flatMap(msg => (msg.id === 'req-a' || msg.id === 'req-b' ? [msg] : []));
+    expect(replies.map(msg => messageText(msg.parts))).toEqual(['first', 'second']);
   });
 });

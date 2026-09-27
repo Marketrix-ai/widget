@@ -69,10 +69,7 @@ export default [
       'jsx-a11y/no-static-element-interactions': 'error',
       'jsx-a11y/click-events-have-key-events': 'error',
       'no-console': ['error', { allow: ['error'] }],
-      '@typescript-eslint/no-unused-vars': 'off',
       '@typescript-eslint/no-explicit-any': 'error',
-      '@typescript-eslint/explicit-function-return-type': 'off',
-      '@typescript-eslint/explicit-module-boundary-types': 'off',
       '@typescript-eslint/no-non-null-assertion': 'error',
       '@typescript-eslint/no-require-imports': 'error',
       '@typescript-eslint/consistent-type-imports': [
@@ -86,15 +83,12 @@ export default [
       '@typescript-eslint/no-unsafe-member-access': 'error',
       '@typescript-eslint/no-unsafe-return': 'error',
       '@typescript-eslint/no-unsafe-argument': 'error',
-      '@typescript-eslint/prefer-nullish-coalescing': 'off',
       '@typescript-eslint/prefer-optional-chain': 'warn',
       '@typescript-eslint/require-array-sort-compare': 'error',
       '@typescript-eslint/restrict-plus-operands': 'error',
       '@typescript-eslint/restrict-template-expressions': 'warn',
 
       'import/no-duplicates': 'error',
-      'import/no-unresolved': 'off',
-      'import/order': 'off',
       'simple-import-sort/imports': 'error',
       'simple-import-sort/exports': 'error',
       'unused-imports/no-unused-imports': 'error',
@@ -118,16 +112,22 @@ export default [
   },
   prettierConfig,
   {
-    files: ['src/components/navigation/MessengerShell.tsx', '**/*.test.ts', '**/*.test.tsx'],
+    files: ['src/components/navigation/MessengerShell.tsx'],
     rules: {
       'no-restricted-properties': 'off',
     },
   },
   {
-    files: ['**/*.test.ts', '**/*.test.tsx', 'src/test/**'],
+    files: ['**/*.test.ts', '**/*.test.tsx'],
     rules: {
+      'no-restricted-properties': 'off',
       'no-restricted-globals': 'off',
       'no-console': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
     },
   },
   {
@@ -146,17 +146,6 @@ export default [
     files: ['scripts/**', '*.config.ts'],
     rules: {
       'no-console': 'off',
-    },
-  },
-  {
-    files: ['**/*.test.ts', '**/*.test.tsx'],
-    rules: {
-      '@typescript-eslint/no-unsafe-call': 'off',
-      '@typescript-eslint/no-unsafe-member-access': 'off',
-      '@typescript-eslint/no-unsafe-assignment': 'off',
-      '@typescript-eslint/no-unsafe-return': 'off',
-      '@typescript-eslint/no-unsafe-argument': 'off',
-      '@typescript-eslint/no-non-null-assertion': 'off',
     },
   },
   {

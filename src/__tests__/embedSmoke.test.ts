@@ -20,7 +20,7 @@ const readme = readFileSync(resolve(root, 'README.md'), 'utf8');
 
 const readmeSnippet = readme.match(/```html\n(<script[\s\S]*?<\/script>)\n```/)?.[1];
 if (!readmeSnippet) throw new Error('README.md script-tag install snippet not found — update this test');
-const mtxAttrNames = [...readmeSnippet.matchAll(/\s(mtx-[a-z-]+)="/g)].map(m => m[1]!);
+const mtxAttrNames = [...readmeSnippet.matchAll(/\s(mtx-[a-z-]+)="/g)].flatMap(m => m[1] ?? []);
 if (mtxAttrNames.length === 0)
   throw new Error('README.md script-tag snippet carries no mtx-* attributes — update this test');
 

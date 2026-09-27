@@ -26,7 +26,7 @@ describe('ChatInput', () => {
 
     render(<ChatInput {...rest} ref={ref} value='Question' />);
 
-    const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
+    const textarea = screen.getByRole<HTMLTextAreaElement>('textbox');
     expect(ref.current).toBe(textarea);
     expect(ref.current?.style.height).toBe('0px');
     expect(ref.current?.style.overflowY).toBe('hidden');
