@@ -86,12 +86,7 @@ class StreamClient {
     if (this.credentialRejected) return;
     this.tornDown = false;
 
-    if (
-      this.chatId === chatId &&
-      (this.status === 'connecting' || this.status === 'open' || this.status === 'registered')
-    ) {
-      return;
-    }
+    if (this.chatId === chatId && this.status !== 'disconnected') return;
 
     const credentials = this.credentials;
     if (!credentials) throw new Error('StreamClient.connect called before setCredentials');
@@ -125,25 +120,19 @@ class StreamClient {
   }
 
   private async consumeEvents(iterator: AsyncIterable<WidgetEvent>, connectionId: number): Promise<void> {
-    let stale = false;
     let evicted = false;
     try {
       for await (const event of iterator) {
-        if (this.connectionId !== connectionId) {
-          stale = true;
-          break;
-        }
+        if (this.connectionId !== connectionId) break;
         this.handleMessage(event);
       }
       evicted = this.status === 'registered';
     } catch (error) {
-      if (this.connectionId !== connectionId) {
-        stale = true;
-      } else if (!this.reconnectSuppressed()) {
+      if (this.connectionId === connectionId && !this.reconnectSuppressed()) {
         logWarn('[StreamClient] Stream error:', error);
       }
     } finally {
-      if (!stale && this.connectionId === connectionId && !this.reconnectSuppressed()) {
+      if (this.connectionId === connectionId && !this.reconnectSuppressed()) {
         if (evicted) remintTabId();
         this.status = 'disconnected';
         this.scheduleReconnect();
