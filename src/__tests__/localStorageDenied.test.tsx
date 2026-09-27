@@ -2,13 +2,13 @@
  * End-to-end test that the widget keeps working — opening, chatting, dragging, resizing — when a host
  * page throws on every `localStorage` access, warning at most once per kind.
  */
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import * as chatThread from '../services/chatThread';
 import { scopeStorageTo } from '../services/StorageService';
 import { streamClient } from '../services/StreamClient';
-import { dragFabAndResize, openChatTab, openWidget, renderWidget } from '../test/renderWidget';
+import { dragFabAndResize, getComposer, openChatTab, openWidget, renderWidget } from '../test/renderWidget';
 
 describe('a host page that denies localStorage outright', () => {
   let warnSpy: ReturnType<typeof vi.spyOn>;
@@ -40,7 +40,7 @@ describe('a host page that denies localStorage outright', () => {
 
     openWidget();
     openChatTab();
-    const composer = screen.getByPlaceholderText('Ask anything');
+    const composer = getComposer();
 
     fireEvent.change(composer, { target: { value: 'does this still work without storage?' } });
     fireEvent.keyDown(composer, { key: 'Enter' });
