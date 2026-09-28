@@ -60,7 +60,7 @@ export function commentMarker(file: string): string | undefined {
   if (name.endsWith('.enc.yaml') || /_pb2(_grpc)?\.py$/.test(name)) return undefined;
   if (['.ts', '.tsx', '.mts', '.mjs', '.js'].includes(extname(name))) return 'ts';
   if (
-    /^Dockerfile(\..+)?$|\.Dockerfile$|^\.env(\..+)?\.(example|sample)$|^(Makefile|Tiltfile|\.gitignore|\.dockerignore)$/.test(
+    /^Dockerfile(\..+)?$|\.Dockerfile$|^\.env(\..+)?\.(example|sample)$|^(Makefile|Tiltfile|\.gitignore)$|\.dockerignore$/.test(
       name,
     )
   )
