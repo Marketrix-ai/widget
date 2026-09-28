@@ -10,7 +10,7 @@
  * edited. The public widget carries a byte-identical copy, because it cannot fetch this private repo.
  */
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { basename, extname, join } from 'node:path';
 
 import ts from 'typescript';
@@ -71,7 +71,7 @@ export function commentMarker(file: string): string | undefined {
 export function findCodeFiles(dir: string): string[] {
   const git = (args: string[], input?: string) => execFileSync('git', args, { cwd: dir, input }).toString().split('\0');
   const files = git(['ls-files', '--cached', '--others', '--exclude-standard', '-z']).filter(
-    f => f && commentMarker(f) && !f.split('/').some(part => SKIP_DIRS.has(part)),
+    f => f && commentMarker(f) && !f.split('/').some(part => SKIP_DIRS.has(part)) && existsSync(join(dir, f)),
   );
   const attributes = git(['check-attr', '-z', '--stdin', 'rule0'], files.map(f => `${f}\0`).join(''));
   const frozen = new Set(attributes.filter((_, i) => i % 3 === 0 && attributes[i + 2] === 'frozen'));
