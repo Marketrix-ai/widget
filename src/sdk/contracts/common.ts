@@ -30,7 +30,6 @@ export const BySimulationIdSchema = z.strictObject({ simulation_id: IdSchema });
 export const ByApplicationIdSchema = z.strictObject({ application_id: IdSchema });
 export const ByRunIdSchema = z.strictObject({ run_id: IdSchema });
 export const ByStudyIdSchema = z.strictObject({ study_id: IdSchema });
-export const ByUserIdSchema = z.strictObject({ user_id: IdSchema });
 
 export const PaginationSchema = z.strictObject({
   limit: z.number().int().min(1).max(200).default(50),
