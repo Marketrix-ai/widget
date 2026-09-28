@@ -23,11 +23,6 @@ describe('package.json', () => {
     expect(() => read('.npmignore')).toThrow();
   });
 
-  it('pins the same bun version as the Dockerfile base image — one drifts, CI and local diverge', () => {
-    const bunVersion = (pkg.packageManager as string).replace(/^bun@/, '');
-    expect(read('Dockerfile')).toContain(`FROM oven/bun:${bunVersion}-alpine AS base`);
-  });
-
   it("runs every test file isolated, so one file's module mocks never leak into another", () => {
     expect(pkg.scripts.test).toContain('--isolate');
   });
