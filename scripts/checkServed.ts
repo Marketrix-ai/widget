@@ -11,6 +11,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import packageJson from '../package.json';
 import { precompress } from './precompress.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
@@ -56,8 +57,7 @@ async function bootLocal(): Promise<{ base: string; container: string }> {
     throw new Error('dist/widget.mjs missing — run `bun run build` first');
   precompress(join(ROOT, 'dist/widget.mjs'));
 
-  const bunVersion = readFileSync(join(ROOT, 'package.json'), 'utf8').match(/"packageManager": "bun@([^"]+)"/)?.[1];
-  if (!bunVersion) throw new Error('package.json pins no bun@ packageManager');
+  const bunVersion = packageJson.packageManager.replace(/^bun@/, '');
   execFileSync(
     'docker',
     ['build', '--target', 'runtime', '--build-arg', `BUN_VERSION=${bunVersion}`, '-t', IMAGE, '.'],
