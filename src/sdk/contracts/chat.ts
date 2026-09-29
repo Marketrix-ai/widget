@@ -5,7 +5,3 @@ import { oc } from '@orpc/contract';
 import { z } from 'zod';
 
 export const chatCreate = oc.output(z.string());
-
-export const chatRoutes = {
-  chatCreate,
-};
