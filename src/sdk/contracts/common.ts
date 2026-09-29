@@ -65,12 +65,6 @@ export const paginatedListOf = <T extends z.ZodType>(schema: T) =>
     offset: z.number(),
   });
 
-export const listOf = <T extends z.ZodType>(schema: T) =>
-  z.strictObject({
-    items: z.array(schema),
-    count: z.number(),
-  });
-
 const recordMembers = <T extends Record<string, z.ZodType>>(schemas: T) =>
   Object.values(schemas) as [T[keyof T], ...T[keyof T][]];
 

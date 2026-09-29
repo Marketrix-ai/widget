@@ -209,13 +209,3 @@ export const widgetMessagePost = oc
     }),
   )
   .output(SuccessSchema);
-
-export const widgetRoutes = {
-  widgetCreate,
-  widgetSearch,
-  widgetPublicSearch,
-  widgetUpdate,
-  widgetDelete,
-  widgetStream,
-  widgetMessagePost,
-};
