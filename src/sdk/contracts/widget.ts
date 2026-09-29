@@ -164,15 +164,7 @@ export type WidgetCommand = z.infer<typeof WidgetCommandSchema>;
 
 export const widgetCreate = oc.input(WidgetWriteSchema).output(ApplicationWidgetEntitySchema);
 
-export const widgetSearch = oc
-  .input(
-    z
-      .strictObject({
-        application_id: IdSchema.optional(),
-      })
-      .extend(PaginationSchema.shape),
-  )
-  .output(paginatedListOf(ApplicationWidgetEntitySchema));
+export const widgetGet = oc.input(ByApplicationIdSchema).output(ApplicationWidgetEntitySchema.nullable());
 
 export const widgetPublicSearch = oc
   .input(

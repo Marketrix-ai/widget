@@ -1,6 +1,6 @@
 /**
  * The Simulation, Run and Graph status tuples and the Run terminal record, zod-free so monitor's client bundle
- * can read them; `simulationStatus.ts`, `foundationEntities.ts` and `internal.ts` derive their schemas from here.
+ * can read them; `simulationStatus.ts` and `foundationEntities.ts` derive their schemas from here.
  */
 export const SIMULATION_STATUSES = ['queued', 'running', 'has_question', 'completed', 'failed', 'stopped'] as const;
 
