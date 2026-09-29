@@ -1,10 +1,14 @@
 /**
- * The Simulation status schema, a leaf so the widget's mirror carries it without the foundation entities:
- * `SimulationStatusSchema`, the active subset and `isSimulationTerminal`.
+ * The status schemas, a leaf so the widget's and monitor's mirrors carry them without the foundation entities:
+ * `SimulationStatusSchema` with its active subset and `isSimulationTerminal`, `RunStatusSchema` and `GraphStatusSchema`.
  */
 import { z } from 'zod';
 
-import { SIMULATION_STATUSES, SIMULATION_TERMINAL_STATUSES } from './jobStatuses';
+import { GRAPH_STATUSES, RUN_STATUSES, SIMULATION_STATUSES, SIMULATION_TERMINAL_STATUSES } from './jobStatuses';
+
+export const RunStatusSchema = z.enum(RUN_STATUSES);
+
+export const GraphStatusSchema = z.enum(GRAPH_STATUSES);
 
 export const SimulationStatusSchema = z.enum(SIMULATION_STATUSES);
 
