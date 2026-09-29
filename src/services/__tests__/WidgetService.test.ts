@@ -2,10 +2,11 @@
  * `loadWidgetConfig` tests: one load is one search and returns one schema-validated config, never a defaults
  * read; an invalid settings response is rejected naming the schema field; a repeat call for the same
  * credentials reuses the cached lookup instead of re-searching, and a failed lookup is never cached so the
- * next call retries against the api. Each case uses its own `mtxId` so the module-level `widgetLookupCache`
+ * next call retries against the api. The api's 401 for unknown credentials reads as a failed validation. Each case uses its own `mtxId` so the module-level `widgetLookupCache`
  * from one test cannot leak a cached result into another. An unreachable-api error names the configured
  * host.
  */
+import { ORPCError } from '@orpc/client';
 import { beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import { type ApplicationWidgetPublicData, getSdk } from '../../sdk';
@@ -88,12 +89,14 @@ describe('loadWidgetConfig', () => {
     expect(mockSdk.widgetPublicSearch).toHaveBeenCalledTimes(1);
   });
 
-  it('reports a failed search', async () => {
-    mockSdk.widgetPublicSearch.mockRejectedValue(new Error('bad credentials'));
+  it("reports the api's refusal of unknown credentials as a failed validation", async () => {
+    mockSdk.widgetPublicSearch.mockRejectedValue(
+      new ORPCError('UNAUTHORIZED', { message: 'Invalid widget credentials' }),
+    );
 
     await expect(
       loadWidgetConfig({ mtxId: 'failed-search', mtxKey: 'test-key', mtxApiHost: 'https://api.test' }),
-    ).rejects.toThrow(/bad credentials/);
+    ).rejects.toThrow('Widget validation failed: Invalid widget credentials');
   });
 
   it('caches the credentialed lookup so a repeat call for the same mtx-id never re-searches', async () => {
