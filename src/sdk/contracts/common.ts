@@ -1,12 +1,15 @@
 /**
  * Wire primitives shared across every domain: id and pagination shapes, list and patch helpers.
  *
- * Exports `IdSchema` (every row id), helpers like `paginatedListOf`/`unionOfRecord`/`discriminatedUnionOfRecord`,
- * the id and pagination input schemas, `BaseEntitySchema` and `StoredDateSchema`, the one date that may arrive as
- * the ISO string a JSONB document stores, and `partialPatch`, whose patches never carry a field's create-time
- * default. This file mirrors whole into the widget SDK, so only domain-free primitives belong here.
+ * Exports `IdSchema` (every row id), `JsonValue`, helpers like `paginatedListOf`/`unionOfRecord`/
+ * `discriminatedUnionOfRecord`, the typed object builders `keysOf`/`fromKeys`/`pickKeys`, the id and pagination
+ * input schemas, `BaseEntitySchema` and `StoredDateSchema`, the one date that may arrive as the ISO string a JSONB
+ * document stores, and `partialPatch`, whose patches never carry a field's create-time default. This file mirrors
+ * whole into the widget SDK, so only domain-free primitives belong here.
  */
 import { z } from 'zod';
+
+export type JsonValue = z.core.util.JSONType;
 
 export const IdSchema = z.number().int().positive();
 
@@ -51,6 +54,7 @@ const stripDefault = (field: z.core.$ZodType): z.core.$ZodType =>
       : field;
 
 export function partialPatch<Shape extends z.ZodRawShape>(schema: z.ZodObject<Shape>) {
+  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
   const shape = Object.fromEntries(
     Object.entries(schema.shape).map(([key, field]) => [key, z.optional(stripDefault(field))]),
   ) as { [K in keyof Shape]: z.ZodOptional<StripDefault<Shape[K]>> };
@@ -65,7 +69,20 @@ export const paginatedListOf = <T extends z.ZodType>(schema: T) =>
     offset: z.number(),
   });
 
+export const keysOf = <T extends Partial<Record<keyof T, unknown>>>(value: T) =>
+  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+  Object.keys(value) as (keyof T & string)[];
+
+export const fromKeys = <const K extends string, V>(keys: readonly K[], value: (key: K) => V) =>
+  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+  Object.fromEntries(keys.map(key => [key, value(key)])) as Record<K, V>;
+
+export const pickKeys = <T, const K extends keyof T & string>(value: T, keys: readonly K[]) =>
+  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+  Object.fromEntries(keys.map(key => [key, value[key]])) as Pick<T, K>;
+
 const recordMembers = <T extends Record<string, z.ZodType>>(schemas: T) =>
+  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
   Object.values(schemas) as [T[keyof T], ...T[keyof T][]];
 
 export const unionOfRecord = <T extends Record<string, z.ZodType>>(schemas: T) => z.union(recordMembers(schemas));
