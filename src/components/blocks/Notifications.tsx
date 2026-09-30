@@ -1,7 +1,8 @@
 /**
  * The widget's one notification surface on Base UI Toast, which owns the live region, timers and stacking.
  * `NotificationList` renders toasts in the error or info tone, `NotificationProvider` portals the viewport
- * into the widget's shadow root at a given bottom offset, and `WidgetNotifications` mirrors the `error` and
+ * into the widget's shadow root on the launcher's bottom baseline (lifted above a bottom launcher only on narrow
+ * screens, where the centred toast would cover it), and `WidgetNotifications` mirrors the `error` and
  * `greeting` props into toasts under a stable id, so a re-render upserts rather than duplicating.
  */
 import { Toast } from '@base-ui/react/toast';
@@ -9,7 +10,7 @@ import React, { useEffect } from 'react';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import { LAYER_TOKENS, notificationToneStyles } from '../../design-system/component-tokens';
-import { EDGE_OFFSET_PX } from '../../utils/widgetPositioning';
+import { EDGE_OFFSET_PX, LAUNCHER_SIZE_PX } from '../../utils/widgetPositioning';
 import { Avatar } from '../base/Avatar';
 import { Button } from '../base/Button';
 import { Flex, Stack } from '../base/Flex';
@@ -107,20 +108,26 @@ const NotificationList: React.FC = () => {
 interface NotificationProviderProps {
   children?: React.ReactNode;
   container?: HTMLElement | null;
-  offsetBottom?: number;
+  launcherBelow?: boolean;
 }
 
 export const NotificationProvider: React.FC<NotificationProviderProps> = ({
   children,
   container,
-  offsetBottom = EDGE_OFFSET_PX,
+  launcherBelow = false,
 }) => (
   <Toast.Provider>
     {children}
     <Toast.Portal container={container ?? undefined}>
       <Toast.Viewport
         className='mtx-toast-viewport'
-        style={{ zIndex: LAYER_TOKENS.toast, bottom: `${offsetBottom}px` }}
+        style={
+          {
+            zIndex: LAYER_TOKENS.toast,
+            '--mtx-toast-edge': `${EDGE_OFFSET_PX}px`,
+            '--mtx-toast-lift': `${launcherBelow ? EDGE_OFFSET_PX + LAUNCHER_SIZE_PX : 0}px`,
+          } as React.CSSProperties
+        }
       >
         <NotificationList />
       </Toast.Viewport>
