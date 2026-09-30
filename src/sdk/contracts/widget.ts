@@ -23,7 +23,7 @@ import {
   InstructionTypeSchema,
   WidgetSettingsWriteSchema,
 } from './widgetSettings';
-import { WIDGET_TOOL_NAMES } from './widgetToolNames';
+import type { WIDGET_TOOL_NAMES } from './widgetToolNames';
 
 const WidgetWriteSchema = z.strictObject({
   application_id: IdSchema,
@@ -84,9 +84,24 @@ const widgetToolCall = <Name extends WidgetToolName>(browserTool: Name) =>
     explanation: z.string().optional(),
   });
 
-const WidgetToolCallSchemas = Object.fromEntries(WIDGET_TOOL_NAMES.map(name => [name, widgetToolCall(name)])) as {
-  [Name in WidgetToolName]: ReturnType<typeof widgetToolCall<Name>>;
-};
+const WidgetToolCallSchemas = {
+  get_html: widgetToolCall('get_html'),
+  get_screenshot: widgetToolCall('get_screenshot'),
+  click_element: widgetToolCall('click_element'),
+  navigate: widgetToolCall('navigate'),
+  type_text: widgetToolCall('type_text'),
+  scroll: widgetToolCall('scroll'),
+  scroll_to_text: widgetToolCall('scroll_to_text'),
+  extract: widgetToolCall('extract'),
+  go_back: widgetToolCall('go_back'),
+  send_keys: widgetToolCall('send_keys'),
+  close_tab: widgetToolCall('close_tab'),
+  select_dropdown_option: widgetToolCall('select_dropdown_option'),
+  get_dropdown_options: widgetToolCall('get_dropdown_options'),
+  wait: widgetToolCall('wait'),
+  search: widgetToolCall('search'),
+  done: widgetToolCall('done'),
+} satisfies Record<WidgetToolName, z.ZodObject>;
 
 export const WidgetToolCallEventSchema = discriminatedUnionOfRecord('browser_tool', WidgetToolCallSchemas);
 
@@ -108,7 +123,7 @@ export const WidgetEventSchema = z.union([
 ]);
 export type WidgetEvent = z.infer<typeof WidgetEventSchema>;
 
-const WidgetToolResultSchema = z.union([
+export const WidgetToolResultSchema = z.union([
   z.strictObject({ text: z.string() }),
   z.strictObject({
     title: z.string(),
