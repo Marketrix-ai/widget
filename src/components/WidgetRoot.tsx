@@ -16,7 +16,7 @@ import { readLocalParsed, scopedKey, writeLocal } from '../services/StorageServi
 import { streamClient } from '../services/StreamClient';
 import type { WidgetPosition } from '../types';
 import { addOpacity } from '../utils/color';
-import { EDGE_OFFSET_PX, getCorner, LAUNCHER_SIZE_PX } from '../utils/widgetPositioning';
+import { getCorner } from '../utils/widgetPositioning';
 import { ErrorBoundary } from './base/ErrorBoundary';
 import { Surface } from './base/Surface';
 import { NotificationProvider, WidgetNotifications } from './blocks/Notifications';
@@ -118,9 +118,7 @@ export const WidgetRoot: React.FC = () => {
         <PortalContainerContext value={portalContainer}>
           <NotificationProvider
             container={portalContainer}
-            offsetBottom={
-              getCorner(widgetPosition).vertical === 'top' ? EDGE_OFFSET_PX : 2 * EDGE_OFFSET_PX + LAUNCHER_SIZE_PX
-            }
+            launcherBelow={getCorner(widgetPosition).vertical === 'bottom'}
           >
             {showProcessingFeedback && (
               <Surface
