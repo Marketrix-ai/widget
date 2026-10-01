@@ -60,7 +60,9 @@ export const WidgetRoot: React.FC = () => {
   const { state, actions } = useWidget();
   const { isPreviewMode } = config;
 
-  useScrollLock(state.isOpen);
+  const hidden = !isPreviewMode && (config.show_widget === false || config.widget_appearance === 'hidden');
+
+  useScrollLock(state.isOpen && !hidden);
 
   const positionStorageKey = scopedKey('marketrix_widget_position', config);
 
@@ -100,10 +102,7 @@ export const WidgetRoot: React.FC = () => {
     if (!isPreviewMode) writeLocal(positionStorageKey, position);
   };
 
-  const hiddenByConfig = config.show_widget === false || config.widget_appearance === 'hidden';
-  if (!isPreviewMode && hiddenByConfig) {
-    return null;
-  }
+  if (hidden) return null;
 
   const showProcessingFeedback = state.isAwaitingReply || state.isTaskRunning;
 

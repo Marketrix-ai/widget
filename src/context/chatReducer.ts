@@ -219,7 +219,10 @@ export function reduceTransportFailure(state: ChatState, text: string): ChatStat
 
 export function reduceStaleReply(state: ChatState, messageId: string, text: string): ChatState {
   const pending = state.messages.find(msg => msg.id === messageId);
-  return pending?.kind === 'agent' && pending.status === 'thinking' ? reduceError(state, messageId, text) : state;
+  const stale =
+    pending?.kind === 'agent' &&
+    (pending.status === 'thinking' || (isPending(pending) && state.task.phase !== 'running'));
+  return stale ? reduceError(state, messageId, text) : state;
 }
 
 export function reduceEvent(state: ChatState, event: WidgetEvent, currentMode: InstructionType): ChatState {

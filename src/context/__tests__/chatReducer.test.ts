@@ -142,6 +142,17 @@ describe('reduceStaleReply', () => {
     expect(reduceStaleReply(state, 'agent-1', 'timeout text')).toBe(state);
   });
 
+  it.each([{ phase: 'idle' } as const, { phase: 'stopped' } as const])(
+    'settles a message paused on the visitor once no task is running ($phase), so a restored one cannot lock input',
+    task => {
+      const state: ChatState = { messages: [agentMessage({ status: 'waiting-for-user', parts: [] })], task };
+      const result = reduceStaleReply(state, 'agent-1', 'timeout text');
+
+      expect(isPending(agentAt(result))).toBe(false);
+      expect(textAt(result)).toBe('timeout text');
+    },
+  );
+
   it('never overwrites a message that already settled', () => {
     const state: ChatState = {
       messages: [agentMessage({ status: undefined, parts: [{ type: 'text', content: 'All done' }] })],
