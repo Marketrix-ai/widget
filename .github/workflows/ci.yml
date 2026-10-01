@@ -1,7 +1,7 @@
 # Repository-local CI: bun, `bun install --frozen-lockfile`, then on a pull request `bun run ci`, the whole
 # validation gate, and on a push to `main` only `bun run build`, which is all the deploy gate reads. Markdown-only
-# changes skip it. This public repository cannot call the private infra repository's reusable workflows, so infra's
-# Node gate is mirrored here.
+# changes skip it, a pull request through the `changes` job so the required `ci` check still reports. This public
+# repository cannot call the private infra repository's reusable workflows, so infra's Node gate is mirrored here.
 name: CI
 on:
   push:
@@ -10,13 +10,31 @@ on:
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
-    paths-ignore: ['**.md']
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
-  ci:
+  changes:
     if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+      - id: diff
+        run: |
+          if [ "${{ github.event_name }}" != pull_request ] || ! git diff --quiet HEAD^1 HEAD -- ':!*.md'; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "code=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  ci:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 20
     steps:
