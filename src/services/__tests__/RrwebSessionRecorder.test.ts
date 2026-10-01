@@ -1,7 +1,7 @@
 /**
  * Tests for `RrwebSessionRecorder`: a rejected flush caps the buffer without dropping the Meta/
  * FullSnapshot baseline, retries keep going even with no new events on a doubling delay that pauses while the
- * stream has given up, start/stop respect an in-flight metadata post and the stream's registration, and a
+ * stream has given up, a rejected session open is retried, start/stop respect an in-flight metadata post and the stream's registration, and a
  * cleared chat moves the recording to its new thread.
  */
 import { record } from '@rrweb/record';
@@ -220,6 +220,22 @@ describe('a stream that gives up before the chat first registers', () => {
     expect(mockSdk.widgetMessagePost.mock.lastCall?.[0].command.type).toBe('rrweb/metadata');
     expect(mockSdk.widgetMessagePost.mock.lastCall?.[0].command).not.toHaveProperty('chat_id');
     expect(mockSdk.widgetMessagePost.mock.lastCall?.[0].command).not.toHaveProperty('application_id');
+    recorder.stop();
+  });
+});
+
+describe('a session open the api rejects', () => {
+  it('retries after the backoff delay and starts recording, without throwing into the host page', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    mockSdk.widgetMessagePost.mockRejectedValueOnce(new Error('503')).mockResolvedValue({ success: true });
+    const recorder = new RrwebSessionRecorder('chat-1');
+
+    await recorder.start();
+    expect(record).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('503'));
+
+    await waitFor(() => expect(record).toHaveBeenCalledTimes(1));
+    expect(mockSdk.widgetMessagePost).toHaveBeenCalledTimes(2);
     recorder.stop();
   });
 });

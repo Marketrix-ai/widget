@@ -1,12 +1,14 @@
 /**
  * Widget smoke: it mounts with the launcher, uses semantic and layer tokens, portals the modal inside
  * the token-bearing widget root, paints it above the panel, keeps a hidden widget visible in preview mode,
- * and times the greeting out even while the root keeps re-rendering.
+ * times the greeting out even while the root keeps re-rendering, and locks mobile page scroll only for a
+ * visible open panel.
  */
 import { act, fireEvent, screen } from '@testing-library/react';
 
 import { WidgetProviders } from '../../context/WidgetProviders';
 import * as chatThread from '../../services/chatThread';
+import { readChatSnapshot, writeChatSnapshot } from '../../services/StorageService';
 import { streamClient } from '../../services/StreamClient';
 import { getMockWidgetConfig } from '../../test/fixtures';
 import { openChatTab, openWidget, renderWidget } from '../../test/renderWidget';
@@ -79,4 +81,25 @@ describe('Widget smoke', () => {
     vi.useRealTimers();
     vi.restoreAllMocks();
   });
+
+  it.each([
+    ['default', 'hidden'],
+    ['hidden', ''],
+  ] as const)(
+    'a restored open panel with appearance %p sets mobile page overflow to %p',
+    async (appearance, overflow) => {
+      vi.spyOn(chatThread, 'getOrCreateChatId').mockResolvedValue('chat-scroll');
+      vi.spyOn(streamClient, 'connect').mockResolvedValue();
+      vi.spyOn(window, 'matchMedia').mockReturnValue({ matches: true } as MediaQueryList);
+      writeChatSnapshot({ ...readChatSnapshot(), isOpen: true });
+
+      const { unmount } = renderWidget({ widget_appearance: appearance }, { previewMode: false });
+      await act(async () => {});
+
+      expect(document.body.style.overflow).toBe(overflow);
+      unmount();
+      writeChatSnapshot({ ...readChatSnapshot(), isOpen: false });
+      vi.restoreAllMocks();
+    },
+  );
 });
