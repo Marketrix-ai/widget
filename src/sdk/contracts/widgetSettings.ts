@@ -8,6 +8,8 @@
  */
 import { z } from 'zod';
 
+import { RowIdSchema } from './common';
+
 export const InstructionTypeSchema = z.enum(['tell', 'show', 'do']);
 
 export type InstructionType = z.infer<typeof InstructionTypeSchema>;
@@ -83,7 +85,7 @@ export const WidgetSettingsWriteSchema = WidgetSettingsDataSchema.omit({
 });
 
 export const ApplicationWidgetEntitySchema = z.strictObject({
-  application_id: z.number(),
+  application_id: RowIdSchema,
   widget_settings: WidgetSettingsDataSchema,
   marketrix_id: z.string().max(100),
   marketrix_key: z.string().max(100),

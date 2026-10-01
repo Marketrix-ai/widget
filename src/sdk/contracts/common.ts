@@ -2,13 +2,16 @@
  * Wire primitives shared across every domain: id and pagination shapes, list and patch helpers.
  *
  * Exports `IdSchema` (an id a caller sends), `RowIdSchema` (a stored id or FK, whose int-ness Postgres enforces),
- * `BaseEntitySchema` (every row's `id`/`created_at`/`updated_at`; `CreatedEntitySchema` for a row never updated),
+ * `PositiveBigintStringSchema` (a bigint id as text, or a row id keying a map), `BaseEntitySchema` (every row's
+ * `id`/`created_at`/`updated_at`; `CreatedEntitySchema` for a row never updated),
  * `JsonValue`, helpers like `paginatedListOf`/`unionOfRecord`/`discriminatedUnionOfRecord`, the typed object builders
  * `keysOf`/`fromKeys`/`pickKeys`, the id and pagination input schemas, `StoredDateSchema`, the one date that may
  * arrive as the ISO string a JSONB document stores, and `partialPatch`, whose patches never carry a field's
  * create-time default. This file mirrors whole into the widget SDK, so only domain-free primitives belong here.
  */
 import { z } from 'zod';
+
+import { PAGE_SIZE_MAX } from './limits';
 
 export type JsonValue = z.core.util.JSONType;
 
@@ -18,6 +21,7 @@ export const EntityStatusSchema = z.enum(['created', 'active', 'suspended']);
 export type EntityStatus = z.infer<typeof EntityStatusSchema>;
 
 export const RowIdSchema = z.number().int();
+export const PositiveBigintStringSchema = z.string().regex(/^[1-9]\d*$/);
 
 export const CreatedEntitySchema = z.strictObject({ id: RowIdSchema, created_at: z.date() });
 export const BaseEntitySchema = CreatedEntitySchema.extend({ updated_at: z.date() });
@@ -35,7 +39,7 @@ export const ByRunIdSchema = z.strictObject({ run_id: IdSchema });
 export const ByStudyIdSchema = z.strictObject({ study_id: IdSchema });
 
 export const PaginationSchema = z.strictObject({
-  limit: z.number().int().min(1).max(200).default(50),
+  limit: z.number().int().min(1).max(PAGE_SIZE_MAX).default(50),
   offset: z.number().int().min(0).default(0),
 });
 
