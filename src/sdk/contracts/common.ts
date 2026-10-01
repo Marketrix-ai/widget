@@ -1,11 +1,12 @@
 /**
  * Wire primitives shared across every domain: id and pagination shapes, list and patch helpers.
  *
- * Exports `IdSchema` (every row id), `JsonValue`, helpers like `paginatedListOf`/`unionOfRecord`/
- * `discriminatedUnionOfRecord`, the typed object builders `keysOf`/`fromKeys`/`pickKeys`, the id and pagination
- * input schemas, `BaseEntitySchema` and `StoredDateSchema`, the one date that may arrive as the ISO string a JSONB
- * document stores, and `partialPatch`, whose patches never carry a field's create-time default. This file mirrors
- * whole into the widget SDK, so only domain-free primitives belong here.
+ * Exports `IdSchema` (an id a caller sends), `RowIdSchema` (a stored id or FK, whose int-ness Postgres enforces),
+ * `BaseEntitySchema` (every row's `id`/`created_at`/`updated_at`; `CreatedEntitySchema` for a row never updated),
+ * `JsonValue`, helpers like `paginatedListOf`/`unionOfRecord`/`discriminatedUnionOfRecord`, the typed object builders
+ * `keysOf`/`fromKeys`/`pickKeys`, the id and pagination input schemas, `StoredDateSchema`, the one date that may
+ * arrive as the ISO string a JSONB document stores, and `partialPatch`, whose patches never carry a field's
+ * create-time default. This file mirrors whole into the widget SDK, so only domain-free primitives belong here.
  */
 import { z } from 'zod';
 
@@ -16,11 +17,10 @@ export const IdSchema = z.number().int().positive();
 export const EntityStatusSchema = z.enum(['created', 'active', 'suspended']);
 export type EntityStatus = z.infer<typeof EntityStatusSchema>;
 
-export const BaseEntitySchema = z.strictObject({
-  id: z.number(),
-  created_at: z.date(),
-  updated_at: z.date(),
-});
+export const RowIdSchema = z.number().int();
+
+export const CreatedEntitySchema = z.strictObject({ id: RowIdSchema, created_at: z.date() });
+export const BaseEntitySchema = CreatedEntitySchema.extend({ updated_at: z.date() });
 
 export const StoredDateSchema = z.union([
   z.date(),
