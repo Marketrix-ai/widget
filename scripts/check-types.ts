@@ -215,7 +215,13 @@ function checkTsFiles(root: string, files: string[]): Issue[] {
   const issues: Issue[] = [];
   for (const [config, owned] of groups) {
     const parsed = config
-      ? ts.parseJsonConfigFileContent(ts.readConfigFile(config, ts.sys.readFile).config, ts.sys, dirname(config))
+      ? ts.parseJsonConfigFileContent(
+          ts.readConfigFile(config, ts.sys.readFile).config,
+          ts.sys,
+          dirname(config),
+          undefined,
+          config,
+        )
       : undefined;
     const program = ts.createProgram([...new Set([...(parsed?.fileNames ?? []), ...owned])], {
       ...(parsed?.options ?? DEFAULT_OPTIONS),
