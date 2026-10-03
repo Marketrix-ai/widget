@@ -4,17 +4,18 @@
  */
 import { describe, expect, it } from 'bun:test';
 
+import { keysOf, pickKeys } from '../../sdk/contracts/common';
 import { WidgetSettingsDataSchema, WidgetSettingsWriteSchema } from '../../sdk/contracts/widgetSettings';
 import { validSettings } from '../../test/fixtures';
 import { parseWidgetSettingsOrThrow } from '../WidgetService';
 
 const valid = validSettings();
-const FIELDS = Object.keys(WidgetSettingsWriteSchema.shape) as (keyof typeof WidgetSettingsWriteSchema.shape)[];
+const FIELDS = keysOf(WidgetSettingsWriteSchema.shape);
 const RENDER_CONSTANTS = Object.keys(WidgetSettingsDataSchema.shape).filter(
   field => !(field in WidgetSettingsWriteSchema.shape),
 );
 
-const expectRejectedAndNamed = (broken: unknown, invalidFields: string[]) => {
+const expectRejectedAndNamed = (broken: Parameters<typeof parseWidgetSettingsOrThrow>[0], invalidFields: string[]) => {
   expect(WidgetSettingsDataSchema.safeParse(broken).success).toBe(false);
   expect(() => parseWidgetSettingsOrThrow(broken)).toThrow(
     new Error(`Widget settings are invalid: ${invalidFields.join(', ')}`),
@@ -30,7 +31,7 @@ describe('parseWidgetSettingsOrThrow', () => {
   it('projects settings from a wider internal config while the wire schema rejects unknown keys', () => {
     const withExtras = { ...valid, widget_render_constant: 'x', another: 1 };
     const result = parseWidgetSettingsOrThrow(withExtras);
-    const rendered = WidgetSettingsWriteSchema.strip().parse(valid);
+    const rendered = pickKeys(valid, FIELDS);
     expect(WidgetSettingsDataSchema.safeParse(withExtras).success).toBe(false);
     expect(result).toEqual(rendered);
     expect(result).not.toHaveProperty('widget_render_constant');
@@ -64,13 +65,6 @@ describe('parseWidgetSettingsOrThrow', () => {
   it('rejects a malformed chip', () => {
     expectRejectedAndNamed({ ...valid, widget_chips: [{ chip_mode: 'nope', chip_text: 'hi' }] }, ['widget_chips']);
   });
-
-  it.each([[null], [undefined], ['settings'], [42]])(
-    'rejects a non-object input (%s), naming only "settings"',
-    input => {
-      expectRejectedAndNamed(input, ['settings']);
-    },
-  );
 
   it('reports every invalid field, not just the first', () => {
     const broken = { ...valid, widget_header: 1, widget_enabled: 'yes' };

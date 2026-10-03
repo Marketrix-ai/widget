@@ -50,7 +50,7 @@ const InitBridge: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       await streamClient.connect(chatId);
     };
 
-    void init().catch(error => {
+    void init().catch((error: unknown) => {
       if (cancelled) return;
       console.error('[Widget] Initialization failed:', error);
       uiActions.setError('Widget failed to initialize. Please refresh the page.');

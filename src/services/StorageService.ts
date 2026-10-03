@@ -21,8 +21,8 @@ const MAX_STARTED_TOOL_CALLS = 200;
 const CONTEXT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 
 const MessagePartSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('text'), content: z.string(), streaming: z.boolean().optional() }),
-  z.object({
+  z.strictObject({ type: z.literal('text'), content: z.string(), streaming: z.boolean().optional() }),
+  z.strictObject({
     type: z.literal('progress'),
     content: z.string(),
     status: z.enum(['in_progress', 'completed', 'failed']),
@@ -33,15 +33,15 @@ const MessagePartSchema = z.discriminatedUnion('type', [
 const MessageBase = { id: z.string(), timestamp: z.coerce.date(), parts: z.array(MessagePartSchema) };
 
 const MessageSchema = z.discriminatedUnion('kind', [
-  z.object({ ...MessageBase, kind: z.literal('user'), mode: InstructionTypeSchema }),
-  z.object({
+  z.strictObject({ ...MessageBase, kind: z.literal('user'), mode: InstructionTypeSchema }),
+  z.strictObject({
     ...MessageBase,
     kind: z.literal('agent'),
     mode: InstructionTypeSchema.optional(),
     status: z.enum([...PENDING_STATUSES, 'question', ...ENDED_STATUSES]).optional(),
   }),
-  z.object({ ...MessageBase, kind: z.literal('system') }),
-  z.object({
+  z.strictObject({ ...MessageBase, kind: z.literal('system') }),
+  z.strictObject({
     ...MessageBase,
     kind: z.literal('screenAccess'),
     mode: InstructionTypeSchema,
@@ -52,12 +52,12 @@ const MessageSchema = z.discriminatedUnion('kind', [
 
 export type StoredMessage = z.infer<typeof MessageSchema>;
 
-const ChatContextSchema = z.object({
+const ChatContextSchema = z.strictObject({
   chat_id: z.string().nullable().catch(null),
   messages: z
-    .array(z.unknown())
+    .array(MessageSchema.nullable().catch(null))
     .catch([])
-    .transform(items => items.flatMap(item => MessageSchema.safeParse(item).data ?? [])),
+    .transform(items => items.filter(item => item !== null)),
   currentMode: InstructionTypeSchema.catch('tell'),
   isOpen: z.boolean().catch(false),
   timestamp: z.number().catch(0),
@@ -136,7 +136,9 @@ export const setChatId = (chatId: string): void => updateContext({ chat_id: chat
 
 export const forgetChatId = (): void => updateContext({ chat_id: null });
 
-function sessionStore(action: (storage: Storage) => string | null | void): string | null {
+function sessionStore(
+  action: (storage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>) => string | null | void,
+): string | null {
   try {
     return action(sessionStorage) ?? null;
   } catch (error) {

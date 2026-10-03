@@ -10,11 +10,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import { configureSdk, getSdk } from '../sdk';
-import { mocked } from '../test/vi-compat';
 
 describe('sdk transport', () => {
+  let fetchSpy: ReturnType<typeof vi.spyOn<typeof globalThis, 'fetch'>>;
+
   beforeEach(() => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ success: true }), { status: 200 }));
+    fetchSpy = vi.spyOn(globalThis, 'fetch');
+    fetchSpy.mockResolvedValue(new Response(JSON.stringify({ success: true }), { status: 200 }));
   });
 
   afterEach(() => {
@@ -26,9 +28,8 @@ describe('sdk transport', () => {
 
     await getSdk().widgetMessagePost({ chat_id: 'c1', command: { type: 'chat/stop' } });
 
-    const mockedFetch = mocked(globalThis.fetch);
-    expect(mockedFetch).toHaveBeenCalledTimes(1);
-    const init = mockedFetch.mock.calls[0]?.[1];
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const init = fetchSpy.mock.calls[0]?.[1];
     expect(init?.credentials).toBe('omit');
   });
 });

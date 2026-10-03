@@ -5,7 +5,7 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'bun:test';
 
-import { mockMediaStream } from '../../../test/fixtures';
+import { FakeMediaStream } from '../../../test/fixtures';
 import { VideoStreamDisplay } from '../VideoStreamDisplay';
 
 afterEach(() => {
@@ -20,7 +20,7 @@ it.each([
   vi.spyOn(HTMLMediaElement.prototype, 'play').mockRejectedValue(reason);
   const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-  render(<VideoStreamDisplay stream={mockMediaStream()} />);
+  render(<VideoStreamDisplay stream={new FakeMediaStream([])} />);
 
   expect(await screen.findByText('Failed to load stream')).toBeInTheDocument();
   expect(consoleError).toHaveBeenCalledWith('[Widget] Failed to play the screen-share stream:', reason);
@@ -30,7 +30,7 @@ it('stays silent when play() is aborted by a replaced stream', async () => {
   vi.spyOn(HTMLMediaElement.prototype, 'play').mockRejectedValue(new DOMException('replaced', 'AbortError'));
   const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-  render(<VideoStreamDisplay stream={mockMediaStream()} />);
+  render(<VideoStreamDisplay stream={new FakeMediaStream([])} />);
   await Promise.resolve();
 
   expect(screen.getByText('Loading stream...')).toBeInTheDocument();

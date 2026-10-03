@@ -9,9 +9,9 @@ import { z } from 'zod';
 
 const RrwebNodeFields = {
   id: z.number(),
-  rootId: z.number().optional(),
-  isShadowHost: z.boolean().optional(),
-  isShadow: z.boolean().optional(),
+  rootId: z.number().exactOptional(),
+  isShadowHost: z.boolean().exactOptional(),
+  isShadow: z.boolean().exactOptional(),
 };
 
 const RrwebAttributesSchema = z.record(z.string(), z.union([z.string(), z.number(), z.literal(true), z.null()]));
@@ -22,7 +22,7 @@ const rrwebSerializedNodeSchemaFor = <Child extends z.ZodType>(child: Child) =>
       ...RrwebNodeFields,
       type: z.literal(0),
       childNodes: z.array(child),
-      compatMode: z.string().optional(),
+      compatMode: z.string().exactOptional(),
     }),
     z.strictObject({
       ...RrwebNodeFields,
@@ -37,15 +37,15 @@ const rrwebSerializedNodeSchemaFor = <Child extends z.ZodType>(child: Child) =>
       tagName: z.string(),
       attributes: RrwebAttributesSchema,
       childNodes: z.array(child),
-      isSVG: z.literal(true).optional(),
-      needBlock: z.boolean().optional(),
-      isCustom: z.literal(true).optional(),
+      isSVG: z.literal(true).exactOptional(),
+      needBlock: z.boolean().exactOptional(),
+      isCustom: z.literal(true).exactOptional(),
     }),
     z.strictObject({
       ...RrwebNodeFields,
       type: z.literal(3),
       textContent: z.string(),
-      isStyle: z.literal(true).optional(),
+      isStyle: z.literal(true).exactOptional(),
     }),
     z.strictObject({ ...RrwebNodeFields, type: z.literal(4), textContent: z.literal('') }),
     z.strictObject({ ...RrwebNodeFields, type: z.literal(5), textContent: z.string() }),
@@ -74,7 +74,7 @@ const RrwebStyleValueSchema = z.record(
 const RrwebStyleIndexSchema = z.union([z.number(), z.array(z.number())]);
 const RrwebStyleAddRuleSchema = z.strictObject({
   rule: z.string(),
-  index: RrwebStyleIndexSchema.optional(),
+  index: RrwebStyleIndexSchema.exactOptional(),
 });
 const RrwebMovementPositionSchema = z.strictObject({
   x: z.number(),
@@ -97,7 +97,11 @@ const rrwebStyleSheetOps = <Target extends z.ZodRawShape>(target: Target) =>
       source: z.literal(13),
       ...target,
       index: z.array(z.number()),
-      set: z.strictObject({ property: z.string(), value: z.string().nullable(), priority: z.string().optional() }),
+      set: z.strictObject({
+        property: z.string(),
+        value: z.string().nullable(),
+        priority: z.union([z.string(), z.undefined()]),
+      }),
     }),
     z.strictObject({
       source: z.literal(13),
@@ -117,16 +121,16 @@ const RrwebIncrementalDataSchema = z.union([
         attributes: z.record(z.string(), z.union([z.string(), RrwebStyleValueSchema, z.null()])),
       }),
     ),
-    removes: z.array(z.strictObject({ parentId: z.number(), id: z.number(), isShadow: z.boolean().optional() })),
+    removes: z.array(z.strictObject({ parentId: z.number(), id: z.number(), isShadow: z.boolean().exactOptional() })),
     adds: z.array(
       z.strictObject({
         parentId: z.number(),
-        previousId: z.number().nullable().optional(),
+        previousId: z.number().nullable().exactOptional(),
         nextId: z.number().nullable(),
         node: RrwebSerializedNodeSchema,
       }),
     ),
-    isAttachIframe: z.literal(true).optional(),
+    isAttachIframe: z.literal(true).exactOptional(),
   }),
   ...([1, 6, 12] as const).map(source =>
     z.strictObject({ source: z.literal(source), positions: z.array(RrwebMovementPositionSchema) }),
@@ -135,9 +139,9 @@ const RrwebIncrementalDataSchema = z.union([
     source: z.literal(2),
     type: z.literal([0, 1, 2, 3, 4, 5, 6, 7, 9, 10]),
     id: z.number(),
-    x: z.number().optional(),
-    y: z.number().optional(),
-    pointerType: z.literal([0, 1, 2]).optional(),
+    x: z.number().exactOptional(),
+    y: z.number().exactOptional(),
+    pointerType: z.literal([0, 1, 2]).exactOptional(),
   }),
   z.strictObject({ source: z.literal(3), id: z.number(), x: z.number(), y: z.number() }),
   z.strictObject({ source: z.literal(4), width: z.number(), height: z.number() }),
@@ -151,11 +155,11 @@ const RrwebIncrementalDataSchema = z.union([
     source: z.literal(7),
     type: z.literal([0, 1, 2, 3, 4]),
     id: z.number(),
-    currentTime: z.number().optional(),
-    volume: z.number().optional(),
-    muted: z.boolean().optional(),
-    loop: z.boolean().optional(),
-    playbackRate: z.number().optional(),
+    currentTime: z.number().exactOptional(),
+    volume: z.number().exactOptional(),
+    muted: z.boolean().exactOptional(),
+    loop: z.boolean().exactOptional(),
+    playbackRate: z.number().exactOptional(),
   }),
   z.union([...rrwebStyleSheetOps({ id: z.number() }), ...rrwebStyleSheetOps({ styleId: z.number() })]),
   z.strictObject({
@@ -172,7 +176,7 @@ const RrwebIncrementalDataSchema = z.union([
   z.strictObject({
     source: z.literal(15),
     id: z.number(),
-    styles: z.array(z.strictObject({ styleId: z.number(), rules: z.array(RrwebStyleAddRuleSchema) })).optional(),
+    styles: z.array(z.strictObject({ styleId: z.number(), rules: z.array(RrwebStyleAddRuleSchema) })).exactOptional(),
     styleIds: z.array(z.number()),
   }),
   z.strictObject({ source: z.literal(16), define: z.strictObject({ name: z.string() }) }),

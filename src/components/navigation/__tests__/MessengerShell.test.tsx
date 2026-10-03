@@ -8,6 +8,7 @@
 import { act, cleanup, fireEvent, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'bun:test';
 
+import { keysOf } from '../../../sdk/contracts/common';
 import * as chatThread from '../../../services/chatThread';
 import { readChatSnapshot, writeChatSnapshot } from '../../../services/StorageService';
 import { streamClient } from '../../../services/StreamClient';
@@ -157,13 +158,13 @@ const drag = (position: WidgetPosition, dx: number, dy: number): CSSStyleDeclara
 };
 
 describe('the one grip is on the corner the panel is free to move', () => {
-  it.each(Object.keys(OUTWARD) as WidgetPosition[])('grows when dragged outward from %s', position => {
+  it.each(keysOf(OUTWARD))('grows when dragged outward from %s', position => {
     const { dx, dy } = OUTWARD[position];
 
     expect(drag(position, dx, dy)).toMatchObject({ width: '440px', height: '540px' });
   });
 
-  it.each(Object.keys(OUTWARD) as WidgetPosition[])('shrinks when dragged inward from %s', position => {
+  it.each(keysOf(OUTWARD))('shrinks when dragged inward from %s', position => {
     const { dx, dy } = OUTWARD[position];
 
     expect(drag(position, -dx, -dy)).toMatchObject({ width: '360px', height: '460px' });

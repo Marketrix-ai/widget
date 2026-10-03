@@ -1,9 +1,10 @@
 /**
  * `bunfig.toml`'s `[test] preload` entry — the sole DOM bootstrap for `bun test`.
  * Copies a jsdom `Window` onto `globalThis`, fills in `localStorage`/`matchMedia`/`ResizeObserver`, wires
- * jest-dom matchers, and `resetDom` clears the body after each test.
+ * jest-dom matchers, and `resetDom` clears the body after each test. The matchers are required, not imported, because
+ * testing-library needs the global `document` while it loads.
  */
-import { afterEach, expect } from 'bun:test';
+import { afterEach, type CustomMatcher, expect } from 'bun:test';
 import { JSDOM } from 'jsdom';
 
 const dom = new JSDOM('<!doctype html><html><body></body></html>', {
@@ -11,7 +12,6 @@ const dom = new JSDOM('<!doctype html><html><body></body></html>', {
   pretendToBeVisual: true,
 });
 
-const { window } = dom;
 const skip = new Set(['window', 'globalThis', 'self', 'top', 'parent']);
 const forceOverride = new Set([
   'Event',
@@ -31,20 +31,20 @@ const isNamespaceLike = (value: unknown): boolean =>
   typeof value === 'function' &&
   (Function.prototype.toString.call(value).startsWith('class') ||
     Object.getOwnPropertyNames(value).some(prop => !OWN_FUNCTION_PROPS.has(prop)));
-for (const key of Object.getOwnPropertyNames(window)) {
+const adopt = (key: string, value: unknown): void => {
+  Reflect.set(globalThis, key, typeof value === 'function' && !isNamespaceLike(value) ? value.bind(dom.window) : value);
+};
+for (const key of Object.getOwnPropertyNames(dom.window)) {
   if (skip.has(key) || (key in globalThis && !forceOverride.has(key))) continue;
-  const value = (window as unknown as Record<string, unknown>)[key];
   try {
-    // @ts-expect-error -- bulk-copying the jsdom window onto globalThis by design
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- `value` is genuinely untyped window surface
-    globalThis[key] = typeof value === 'function' && !isNamespaceLike(value) ? value.bind(window) : value;
+    adopt(key, Reflect.get(dom.window, key));
   } catch (error) {
     if (!(error instanceof TypeError)) console.error(`[preload] Unexpected failure copying window.${key}:`, error);
   }
 }
-globalThis.window = globalThis as unknown as Window & typeof globalThis;
-globalThis.document = window.document;
-globalThis.navigator = window.navigator;
+Reflect.set(globalThis, 'window', globalThis);
+globalThis.document = dom.window.document;
+globalThis.navigator = dom.window.navigator;
 
 if (typeof globalThis.localStorage?.setItem !== 'function') {
   const store = new Map<string, string>();
@@ -57,21 +57,20 @@ if (typeof globalThis.localStorage?.setItem !== 'function') {
       return store.size;
     },
     key: (index: number) => [...store.keys()][index] ?? null,
-  } as Storage;
+  };
 }
 
 if (typeof globalThis.matchMedia !== 'function') {
-  globalThis.matchMedia = (media: string) =>
-    ({
-      media,
-      matches: false,
-      onchange: null,
-      addEventListener: () => {},
-      removeEventListener: () => {},
-      addListener: () => {},
-      removeListener: () => {},
-      dispatchEvent: () => false,
-    }) as MediaQueryList;
+  globalThis.matchMedia = (media: string): MediaQueryList => ({
+    media,
+    matches: false,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  });
 }
 
 if (typeof globalThis.ResizeObserver === 'undefined') {
@@ -82,9 +81,15 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/consistent-type-imports -- see file header: must run after `document` exists
-const matchers = require('@testing-library/jest-dom/matchers') as typeof import('@testing-library/jest-dom/matchers');
-expect.extend(matchers);
+type Matchers = Record<string, CustomMatcher<unknown, unknown[]>>;
+const isMatchers = (mod: unknown): mod is Matchers =>
+  typeof mod === 'object' && mod !== null && Object.keys(mod).every(key => typeof Reflect.get(mod, key) === 'function');
+function matchersOf(mod: unknown): Matchers {
+  if (!isMatchers(mod)) throw new Error('@testing-library/jest-dom/matchers exports something other than matchers');
+  return mod;
+}
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+expect.extend(matchersOf(require('@testing-library/jest-dom/matchers')));
 
 export function resetDom(): void {
   document.body.replaceChildren();

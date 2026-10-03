@@ -16,9 +16,9 @@ import { isPending } from '../utils/chat';
 
 export const WidgetConfigContext = createContext<ValidWidgetConfig | null>(null);
 
-export const useRequiredContext = <T>(context: Context<T>, provider: string): NonNullable<T> => {
+export const useRequiredContext = <T>(context: Context<T | null>, provider: string): T => {
   const value = useContext(context);
-  if (value == null) throw new Error(`This hook must be used within ${provider}`);
+  if (value === null) throw new Error(`This hook must be used within ${provider}`);
   return value;
 };
 

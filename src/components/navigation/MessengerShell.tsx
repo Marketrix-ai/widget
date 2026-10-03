@@ -78,7 +78,7 @@ function useFocusTrap(
   }, [isActive, containerRef, focusTargetRef, onEscape]);
 }
 
-const SizeSchema = z.object({ width: z.number(), height: z.number() });
+const SizeSchema = z.strictObject({ width: z.number(), height: z.number() });
 
 type Size = z.infer<typeof SizeSchema>;
 
@@ -292,7 +292,7 @@ export const MessengerShell: React.FC = () => {
 
       <Tabs.Root
         value={activeView}
-        onValueChange={value => {
+        onValueChange={(value: unknown) => {
           const view = WIDGET_VIEWS.find(candidate => candidate === value);
           if (view) actions.applyState({ activeView: view });
         }}

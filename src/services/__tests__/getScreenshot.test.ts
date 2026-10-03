@@ -6,7 +6,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
-import { flushMicrotasks, mockMediaStream } from '../../test/fixtures';
+import { FakeMediaStream, flushMicrotasks } from '../../test/fixtures';
 import { resetDom } from '../../test/preload';
 import { advanceTimersByTimeAsync } from '../../test/vi-compat';
 import { executeTool } from '../browserTools';
@@ -23,7 +23,7 @@ describe('get_screenshot with no active screen share', () => {
 
   it('fails instead of prompting a new share, which would bypass the visitor Deny', async () => {
     const result = await executeTool('get_screenshot', {}, 'do');
-    expect(result).toMatchObject({ success: false, error: expect.stringContaining('not sharing') });
+    expect(result.success ? '' : result.error).toContain('not sharing');
     expect(document.querySelector('video')).toBeNull();
   });
 });
@@ -31,7 +31,7 @@ describe('get_screenshot with no active screen share', () => {
 describe('get_screenshot on a stream that never delivers a frame', () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.spyOn(ScreenShareService, 'activeScreenStream').mockReturnValue(mockMediaStream());
+    vi.spyOn(ScreenShareService, 'activeScreenStream').mockReturnValue(new FakeMediaStream());
   });
 
   afterEach(() => {
@@ -47,24 +47,21 @@ describe('get_screenshot on a stream that never delivers a frame', () => {
 
     await advanceTimersByTimeAsync(5000);
 
-    expect(await result).toMatchObject({ success: false, error: expect.stringContaining('no frame') });
+    const settled = await result;
+    expect(settled.success ? '' : settled.error).toContain('no frame');
     expect(document.querySelector('video')).toBeNull();
   });
 });
 
 describe('get_screenshot when the browser refuses a 2d canvas context', () => {
-  let getContext: typeof HTMLCanvasElement.prototype.getContext;
-
   beforeEach(() => {
-    vi.spyOn(ScreenShareService, 'activeScreenStream').mockReturnValue(mockMediaStream());
-    getContext = HTMLCanvasElement.prototype.getContext;
-    HTMLCanvasElement.prototype.getContext = vi.fn(() => null) as unknown as typeof getContext;
+    vi.spyOn(ScreenShareService, 'activeScreenStream').mockReturnValue(new FakeMediaStream());
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
     Object.defineProperty(HTMLVideoElement.prototype, 'videoWidth', { configurable: true, value: 320 });
     Object.defineProperty(HTMLVideoElement.prototype, 'videoHeight', { configurable: true, value: 240 });
   });
 
   afterEach(() => {
-    HTMLCanvasElement.prototype.getContext = getContext;
     resetDom();
     vi.restoreAllMocks();
   });
@@ -86,10 +83,10 @@ describe('get_screenshot when the browser grants a 2d canvas context', () => {
   const mockToDataURL = vi.fn(() => 'data:image/jpeg;base64,fake-frame');
 
   beforeEach(() => {
-    vi.spyOn(ScreenShareService, 'activeScreenStream').mockReturnValue(mockMediaStream());
+    vi.spyOn(ScreenShareService, 'activeScreenStream').mockReturnValue(new FakeMediaStream());
     getContext = HTMLCanvasElement.prototype.getContext;
     toDataURL = HTMLCanvasElement.prototype.toDataURL;
-    HTMLCanvasElement.prototype.getContext = vi.fn(() => ({ drawImage })) as unknown as typeof getContext;
+    Reflect.set(HTMLCanvasElement.prototype, 'getContext', () => ({ drawImage }));
     HTMLCanvasElement.prototype.toDataURL = mockToDataURL;
     Object.defineProperty(HTMLVideoElement.prototype, 'videoWidth', { configurable: true, value: 320 });
     Object.defineProperty(HTMLVideoElement.prototype, 'videoHeight', { configurable: true, value: 240 });

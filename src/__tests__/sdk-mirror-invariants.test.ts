@@ -8,15 +8,15 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { expect, it } from 'bun:test';
+import { z } from 'zod';
 
 import { widgetMessagePost, widgetStream } from '../sdk/contracts/widget';
 
-function inputFields(procedure: unknown): string[] {
-  const schema = (procedure as { '~orpc': { inputSchema?: { shape?: Record<string, unknown> } } })['~orpc'].inputSchema;
-  const shape = schema?.shape;
-  if (!shape)
+function inputFields(procedure: typeof widgetStream | typeof widgetMessagePost): string[] {
+  const schema = procedure['~orpc'].inputSchema;
+  if (!(schema instanceof z.ZodObject))
     throw new Error('the oRPC contract no longer exposes ~orpc.inputSchema.shape — this check is blind, fix it');
-  return Object.keys(shape);
+  return Object.keys(schema.shape);
 }
 
 it.each([

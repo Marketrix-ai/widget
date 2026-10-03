@@ -4,26 +4,25 @@
  * stream has given up, a rejected session open is retried, start/stop respect an in-flight metadata post and the stream's registration, and a
  * cleared chat moves the recording to its new thread.
  */
-import { record } from '@rrweb/record';
-import { EventType, type eventWithTime } from '@rrweb/types';
+import type { record as recordFn } from '@rrweb/record';
+import { EventType } from '@rrweb/types';
 import { waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
-import { getSdk } from '../../sdk';
+import type { WidgetClient } from '../../sdk';
 import type { RrwebEvent } from '../../sdk/contracts/rrweb';
 import { asStreamClientInternals, flushMicrotasks } from '../../test/fixtures';
-import { advanceTimersByTimeAsync, mocked, mockSdkModule, restoreModuleAfterAll } from '../../test/vi-compat';
+import { advanceTimersByTimeAsync, mockSdk } from '../../test/vi-compat';
 import { RrwebSessionRecorder } from '../RrwebSessionRecorder';
 import { streamClient, StreamGaveUpError } from '../StreamClient';
 
-vi.mock('@rrweb/record', () => ({ record: vi.fn(() => vi.fn()) }));
-vi.mock('../../sdk', () => mockSdkModule({ widgetMessagePost: vi.fn() }));
-restoreModuleAfterAll('../../sdk', () => import('../../sdk/index.ts?real'));
-
-const mockSdk = mocked(getSdk());
+const record = vi.fn<(...args: Parameters<typeof recordFn>) => ReturnType<typeof recordFn>>(() => vi.fn());
+vi.mock('@rrweb/record', () => ({ record }));
+const widgetMessagePost = vi.fn<WidgetClient['widgetMessagePost']>();
+mockSdk({ widgetMessagePost });
 
 const lastPostedEvents = () => {
-  const command = mockSdk.widgetMessagePost.mock.lastCall?.[0].command;
+  const command = widgetMessagePost.mock.lastCall?.[0].command;
   if (command?.type !== 'rrweb/events')
     throw new Error(`last post was ${command?.type ?? 'nothing'}, not rrweb/events`);
   return command.events;
@@ -38,7 +37,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-type Emit = (event: Pick<eventWithTime, 'type' | 'timestamp'> & { data: unknown }, isCheckout?: boolean) => void;
+type Emit = NonNullable<NonNullable<Parameters<typeof recordFn>[0]>['emit']>;
 
 const metaEvent = (timestamp: number): Extract<RrwebEvent, { type: 4 }> => ({
   type: EventType.Meta,
@@ -57,13 +56,12 @@ const incrementalEvent = (timestamp: number): Extract<RrwebEvent, { type: 3 }> =
 });
 
 const startRecorder = async (): Promise<{ recorder: RrwebSessionRecorder; emit: Emit }> => {
-  mockSdk.widgetMessagePost.mockResolvedValueOnce({ success: true });
+  widgetMessagePost.mockResolvedValueOnce({ success: true });
   const recorder = new RrwebSessionRecorder('chat-1');
   await recorder.start();
-  const call = mocked(record).mock.calls[0];
-  const options = call?.[0];
-  if (!options) throw new Error('expected @rrweb/record to have been called');
-  return { recorder, emit: options.emit as unknown as Emit };
+  const emit = record.mock.calls[0]?.[0]?.emit;
+  if (!emit) throw new Error('expected @rrweb/record to have been called with an emit');
+  return { recorder, emit };
 };
 
 describe('rrweb event validation', () => {
@@ -77,7 +75,7 @@ describe('rrweb event validation', () => {
     await recorder.stop();
 
     expect(warn).toHaveBeenCalledTimes(1);
-    expect(mockSdk.widgetMessagePost).toHaveBeenCalledTimes(1);
+    expect(widgetMessagePost).toHaveBeenCalledTimes(1);
     warn.mockRestore();
   });
 });
@@ -86,7 +84,7 @@ describe('a flush the api rejects', () => {
   const startWithARejectedFlush = async () => {
     vi.useFakeTimers();
     const { emit } = await startRecorder();
-    mockSdk.widgetMessagePost.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({ success: true });
+    widgetMessagePost.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({ success: true });
     return emit;
   };
 
@@ -113,12 +111,12 @@ describe('a flush the api rejects', () => {
 
     emit(metaEvent(0));
     await advanceTimersByTimeAsync(500);
-    expect(mockSdk.widgetMessagePost).toHaveBeenCalledTimes(2);
+    expect(widgetMessagePost).toHaveBeenCalledTimes(2);
 
     await advanceTimersByTimeAsync(500);
 
     const events = lastPostedEvents();
-    expect(mockSdk.widgetMessagePost).toHaveBeenCalledTimes(3);
+    expect(widgetMessagePost).toHaveBeenCalledTimes(3);
     expect(events).toEqual([metaEvent(0)]);
     vi.useRealTimers();
   });
@@ -128,18 +126,18 @@ describe('a flush that keeps failing', () => {
   it('backs off on a doubling delay instead of polling every 500ms', async () => {
     vi.useFakeTimers();
     const { recorder, emit } = await startRecorder();
-    mockSdk.widgetMessagePost.mockRejectedValue(new Error('offline'));
+    widgetMessagePost.mockRejectedValue(new Error('offline'));
 
     emit(metaEvent(0));
     await advanceTimersByTimeAsync(500);
     await advanceTimersByTimeAsync(500);
     await advanceTimersByTimeAsync(1000);
-    expect(mockSdk.widgetMessagePost).toHaveBeenCalledTimes(4);
+    expect(widgetMessagePost).toHaveBeenCalledTimes(4);
 
     await advanceTimersByTimeAsync(1999);
-    expect(mockSdk.widgetMessagePost).toHaveBeenCalledTimes(4);
+    expect(widgetMessagePost).toHaveBeenCalledTimes(4);
     await advanceTimersByTimeAsync(1);
-    expect(mockSdk.widgetMessagePost).toHaveBeenCalledTimes(5);
+    expect(widgetMessagePost).toHaveBeenCalledTimes(5);
     recorder.stop();
     vi.useRealTimers();
   });
@@ -147,20 +145,20 @@ describe('a flush that keeps failing', () => {
   it('stops retrying once the stream gives up and resumes when it registers again', async () => {
     vi.useFakeTimers();
     const { recorder, emit } = await startRecorder();
-    mockSdk.widgetMessagePost.mockRejectedValueOnce(new Error('offline'));
+    widgetMessagePost.mockRejectedValueOnce(new Error('offline'));
 
     emit(metaEvent(0));
     await advanceTimersByTimeAsync(500);
     asStreamClientInternals().giveUp('Could not reconnect to the assistant. Try again.');
     emit(incrementalEvent(1));
     await advanceTimersByTimeAsync(120_000);
-    expect(mockSdk.widgetMessagePost).toHaveBeenCalledTimes(2);
+    expect(widgetMessagePost).toHaveBeenCalledTimes(2);
 
-    mockSdk.widgetMessagePost.mockResolvedValueOnce({ success: true });
+    widgetMessagePost.mockResolvedValueOnce({ success: true });
     asStreamClientInternals().handleMessage({ type: 'registered', chat_id: 'chat-1' });
     await flushMicrotasks();
     const events = lastPostedEvents();
-    expect(mockSdk.widgetMessagePost).toHaveBeenCalledTimes(3);
+    expect(widgetMessagePost).toHaveBeenCalledTimes(3);
     expect(events).toEqual([metaEvent(0), incrementalEvent(1)]);
     recorder.stop();
     vi.useRealTimers();
@@ -174,7 +172,7 @@ describe('a recorder whose stream has given up', () => {
     asStreamClientInternals().giveUp('Could not reconnect to the assistant. Try again.');
 
     for (let i = 0; i < 20_010; i++) emit(incrementalEvent(i));
-    mockSdk.widgetMessagePost.mockResolvedValueOnce({ success: true });
+    widgetMessagePost.mockResolvedValueOnce({ success: true });
     asStreamClientInternals().handleMessage({ type: 'registered', chat_id: 'chat-1' });
     await flushMicrotasks();
 
@@ -189,14 +187,14 @@ describe('a recorder whose stream has given up', () => {
     Object.assign(record, { takeFullSnapshot: vi.fn() });
     const { recorder, emit } = await startRecorder();
     asStreamClientInternals().giveUp('Could not reconnect to the assistant. Try again.');
-    mockSdk.widgetMessagePost.mockResolvedValue({ success: true });
+    widgetMessagePost.mockResolvedValue({ success: true });
 
     asStreamClientInternals().handleMessage({ type: 'registered', chat_id: 'chat-2' });
-    await waitFor(() => expect(mockSdk.widgetMessagePost.mock.lastCall?.[0].chat_id).toBe('chat-2'));
+    await waitFor(() => expect(widgetMessagePost.mock.lastCall?.[0].chat_id).toBe('chat-2'));
     emit(incrementalEvent(1));
     await advanceTimersByTimeAsync(500);
 
-    const posted = mockSdk.widgetMessagePost.mock.lastCall?.[0];
+    const posted = widgetMessagePost.mock.lastCall?.[0];
     expect(posted?.chat_id).toBe('chat-2');
     expect(posted?.command).toMatchObject({ type: 'rrweb/events', events: [incrementalEvent(1)] });
     recorder.stop();
@@ -209,7 +207,7 @@ describe('a stream that gives up before the chat first registers', () => {
     vi.spyOn(streamClient, 'ready')
       .mockRejectedValueOnce(new StreamGaveUpError('Could not reconnect to the assistant. Try again.'))
       .mockResolvedValue();
-    mockSdk.widgetMessagePost.mockResolvedValue({ success: true });
+    widgetMessagePost.mockResolvedValue({ success: true });
     const recorder = new RrwebSessionRecorder('chat-1');
 
     await recorder.start();
@@ -217,9 +215,9 @@ describe('a stream that gives up before the chat first registers', () => {
 
     asStreamClientInternals().handleMessage({ type: 'registered', chat_id: 'chat-1' });
     await waitFor(() => expect(record).toHaveBeenCalledTimes(1));
-    expect(mockSdk.widgetMessagePost.mock.lastCall?.[0].command.type).toBe('rrweb/metadata');
-    expect(mockSdk.widgetMessagePost.mock.lastCall?.[0].command).not.toHaveProperty('chat_id');
-    expect(mockSdk.widgetMessagePost.mock.lastCall?.[0].command).not.toHaveProperty('application_id');
+    expect(widgetMessagePost.mock.lastCall?.[0].command.type).toBe('rrweb/metadata');
+    expect(widgetMessagePost.mock.lastCall?.[0].command).not.toHaveProperty('chat_id');
+    expect(widgetMessagePost.mock.lastCall?.[0].command).not.toHaveProperty('application_id');
     recorder.stop();
   });
 });
@@ -227,15 +225,15 @@ describe('a stream that gives up before the chat first registers', () => {
 describe('a session open the api rejects', () => {
   it('retries after the backoff delay and starts recording, without throwing into the host page', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    mockSdk.widgetMessagePost.mockRejectedValueOnce(new Error('503')).mockResolvedValue({ success: true });
+    widgetMessagePost.mockRejectedValueOnce(new Error('503')).mockResolvedValue({ success: true });
     const recorder = new RrwebSessionRecorder('chat-1');
 
     await recorder.start();
     expect(record).not.toHaveBeenCalled();
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('503'));
+    expect(warn.mock.calls.flat().join(' ')).toContain('503');
 
     await waitFor(() => expect(record).toHaveBeenCalledTimes(1));
-    expect(mockSdk.widgetMessagePost).toHaveBeenCalledTimes(2);
+    expect(widgetMessagePost).toHaveBeenCalledTimes(2);
     recorder.stop();
   });
 });
@@ -243,7 +241,7 @@ describe('a session open the api rejects', () => {
 describe('RrwebSessionRecorder lifecycle', () => {
   it('does not begin recording when stopped while metadata is in flight', async () => {
     let resolveMetadata!: () => void;
-    mockSdk.widgetMessagePost.mockReturnValueOnce(
+    widgetMessagePost.mockReturnValueOnce(
       new Promise(resolve => {
         resolveMetadata = () => resolve({ success: true });
       }),
@@ -262,8 +260,8 @@ describe('RrwebSessionRecorder lifecycle', () => {
 describe('RrwebSessionRecorder.stop', () => {
   it('flushes whatever is buffered instead of dropping it', async () => {
     const { recorder, emit } = await startRecorder();
-    mockSdk.widgetMessagePost.mockClear();
-    mockSdk.widgetMessagePost.mockResolvedValueOnce({ success: true });
+    widgetMessagePost.mockClear();
+    widgetMessagePost.mockResolvedValueOnce({ success: true });
     emit(metaEvent(0));
 
     recorder.stop();
@@ -277,13 +275,13 @@ describe('RrwebSessionRecorder.stop', () => {
 describe('a recorder already recording', () => {
   it('is a no-op on a second start(), never arming a duplicate rrweb instance', async () => {
     const { recorder } = await startRecorder();
-    mocked(record).mockClear();
-    mockSdk.widgetMessagePost.mockClear();
+    record.mockClear();
+    widgetMessagePost.mockClear();
 
     await recorder.start();
 
     expect(record).not.toHaveBeenCalled();
-    expect(mockSdk.widgetMessagePost).not.toHaveBeenCalled();
+    expect(widgetMessagePost).not.toHaveBeenCalled();
   });
 });
 
@@ -295,18 +293,18 @@ describe('a recorder posting into a chat the api has not registered', () => {
         register = resolve;
       }),
     );
-    mockSdk.widgetMessagePost.mockResolvedValueOnce({ success: true });
+    widgetMessagePost.mockResolvedValueOnce({ success: true });
 
     const start = new RrwebSessionRecorder('chat-1').start();
     await flushMicrotasks();
 
     expect(ready).toHaveBeenCalledWith('chat-1');
-    expect(mockSdk.widgetMessagePost).not.toHaveBeenCalled();
+    expect(widgetMessagePost).not.toHaveBeenCalled();
 
     register();
     await start;
 
-    expect(mockSdk.widgetMessagePost).toHaveBeenCalledTimes(1);
+    expect(widgetMessagePost).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -318,12 +316,12 @@ describe('a cleared chat', () => {
     const { recorder } = await startRecorder();
     const onMessage = listen.mock.calls[0]?.[0].onMessage;
     if (!onMessage) throw new Error('expected the recorder to listen to the stream');
-    mockSdk.widgetMessagePost.mockResolvedValue({ success: true });
+    widgetMessagePost.mockResolvedValue({ success: true });
 
     onMessage({ type: 'registered', chat_id: 'chat-2' });
     await waitFor(() => expect(takeFullSnapshot).toHaveBeenCalledTimes(1));
 
-    const metadata = mockSdk.widgetMessagePost.mock.calls
+    const metadata = widgetMessagePost.mock.calls
       .map(([input]) => input)
       .filter(input => input.command.type === 'rrweb/metadata');
     expect(metadata.map(input => input.chat_id)).toEqual(['chat-1', 'chat-2']);

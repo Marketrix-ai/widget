@@ -90,7 +90,7 @@ describe('Widget smoke', () => {
     async (appearance, overflow) => {
       vi.spyOn(chatThread, 'getOrCreateChatId').mockResolvedValue('chat-scroll');
       vi.spyOn(streamClient, 'connect').mockResolvedValue();
-      vi.spyOn(window, 'matchMedia').mockReturnValue({ matches: true } as MediaQueryList);
+      vi.spyOn(window, 'matchMedia').mockReturnValue({ ...window.matchMedia(''), matches: true });
       writeChatSnapshot({ ...readChatSnapshot(), isOpen: true });
 
       const { unmount } = renderWidget({ widget_appearance: appearance }, { previewMode: false });

@@ -1,19 +1,17 @@
 /**
- * Wire primitives shared across every domain: id and pagination shapes, list and patch helpers.
+ * Wire primitives shared across every domain: id and pagination shapes and list helpers.
  *
  * Exports `IdSchema` (an id a caller sends), `RowIdSchema` (a stored id or FK, whose int-ness Postgres enforces),
  * `PositiveBigintStringSchema` (a bigint id as text, or a row id keying a map), `BaseEntitySchema` (every row's
- * `id`/`created_at`/`updated_at`; `CreatedEntitySchema` for a row never updated),
- * `JsonValue`, helpers like `paginatedListOf`/`unionOfRecord`/`discriminatedUnionOfRecord`, the typed object builders
- * `keysOf`/`fromKeys`/`pickKeys`, the id and pagination input schemas, `StoredDateSchema`, the one date that may
- * arrive as the ISO string a JSONB document stores, and `partialPatch`, whose patches never carry a field's
- * create-time default. This file mirrors whole into the widget SDK, so only domain-free primitives belong here.
+ * `id`/`created_at`/`updated_at`; `CreatedEntitySchema` for a row never updated), helpers like
+ * `paginatedListOf`/`unionOfRecord`/`discriminatedUnionOfRecord`, the typed object builders `keysOf`/`fromKeys`/
+ * `pickKeys` over `withKeys` (an object checked to hold exactly the given keys), the id and pagination input schemas, and `StoredDateSchema`, the one date that may arrive as the ISO
+ * string a JSONB document stores. This file mirrors whole into the widget SDK, so only domain-free primitives belong
+ * here.
  */
 import { z } from 'zod';
 
 import { PAGE_SIZE_MAX } from './limits';
-
-export type JsonValue = z.core.util.JSONType;
 
 export const IdSchema = z.number().int().positive();
 
@@ -43,28 +41,6 @@ export const PaginationSchema = z.strictObject({
   offset: z.number().int().min(0).default(0),
 });
 
-type StripDefault<T> =
-  T extends z.ZodDefault<infer Inner>
-    ? Inner
-    : T extends z.ZodPipe<z.ZodDefault<infer Inner>, infer Out>
-      ? z.ZodPipe<Inner, Out>
-      : T;
-
-const stripDefault = (field: z.core.$ZodType): z.core.$ZodType =>
-  field instanceof z.ZodDefault
-    ? field.removeDefault()
-    : field instanceof z.ZodPipe && field.in instanceof z.ZodDefault
-      ? z.pipe(field.in.removeDefault(), field.out)
-      : field;
-
-export function partialPatch<Shape extends z.ZodRawShape>(schema: z.ZodObject<Shape>) {
-  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-  const shape = Object.fromEntries(
-    Object.entries(schema.shape).map(([key, field]) => [key, z.optional(stripDefault(field))]),
-  ) as { [K in keyof Shape]: z.ZodOptional<StripDefault<Shape[K]>> };
-  return z.strictObject(shape);
-}
-
 export const paginatedListOf = <T extends z.ZodType>(schema: T) =>
   z.strictObject({
     items: z.array(schema),
@@ -73,21 +49,28 @@ export const paginatedListOf = <T extends z.ZodType>(schema: T) =>
     offset: z.number(),
   });
 
-export const keysOf = <T extends Partial<Record<keyof T, unknown>>>(value: T) =>
-  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-  Object.keys(value) as (keyof T & string)[];
+export const keysOf = <T extends Partial<Record<keyof T, unknown>>>(value: T): (keyof T & string)[] =>
+  Object.keys(value).filter((key): key is keyof T & string => key in value);
 
-export const fromKeys = <const K extends string, V>(keys: readonly K[], value: (key: K) => V) =>
-  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-  Object.fromEntries(keys.map(key => [key, value(key)])) as Record<K, V>;
+const holdsKeys = <R>(value: unknown, keys: readonly string[]): value is R =>
+  typeof value === 'object' && value !== null && Object.keys(value).sort().join() === [...keys].sort().join();
 
-export const pickKeys = <T, const K extends keyof T & string>(value: T, keys: readonly K[]) =>
-  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-  Object.fromEntries(keys.map(key => [key, value[key]])) as Pick<T, K>;
+export const withKeys = <R>(value: unknown, keys: readonly string[]): R => {
+  if (holdsKeys<R>(value, keys)) return value;
+  throw new Error(`Expected exactly the keys ${keys.join(', ')}`);
+};
 
-const recordMembers = <T extends Record<string, z.ZodType>>(schemas: T) =>
-  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-  Object.values(schemas) as [T[keyof T], ...T[keyof T][]];
+export const fromKeys = <const K extends string, V>(keys: readonly K[], value: (key: K) => V): Record<K, V> =>
+  withKeys(Object.fromEntries(keys.map(key => [key, value(key)])), keys);
+
+export const pickKeys = <T, const K extends keyof T & string>(value: T, keys: readonly K[]): Pick<T, K> =>
+  withKeys(Object.fromEntries(keys.map(key => [key, value[key]])), keys);
+
+const recordMembers = <T extends Record<string, z.ZodType>>(schemas: T): [T[keyof T], ...T[keyof T][]] => {
+  const [first, ...rest] = keysOf(schemas).map(key => schemas[key]);
+  if (!first) throw new Error('A union of a record needs at least one member');
+  return [first, ...rest];
+};
 
 export const unionOfRecord = <T extends Record<string, z.ZodType>>(schemas: T) => z.union(recordMembers(schemas));
 

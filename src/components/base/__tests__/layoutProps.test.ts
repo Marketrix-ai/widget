@@ -4,6 +4,7 @@
  */
 import { describe, expect, it } from 'bun:test';
 
+import { keysOf } from '../../../sdk/contracts/common';
 import { type LayoutProps, splitLayout } from '../layoutProps';
 
 const layoutStyle = (props: LayoutProps) => splitLayout(props)[0];
@@ -22,8 +23,8 @@ describe('splitLayout style', () => {
   });
 
   it('maps every spacing token to its pixel value for padding', () => {
-    for (const [token, px] of Object.entries(SPACING_PX)) {
-      expect(layoutStyle({ padding: token as keyof typeof SPACING_PX })).toEqual({ padding: px });
+    for (const token of keysOf(SPACING_PX)) {
+      expect(layoutStyle({ padding: token })).toEqual({ padding: SPACING_PX[token] });
     }
   });
 
@@ -49,9 +50,9 @@ describe('splitLayout style', () => {
   });
 
   it('maps every align token to alignItems', () => {
-    const cases = { center: 'center', start: 'flex-start' };
-    for (const [align, alignItems] of Object.entries(cases)) {
-      expect(layoutStyle({ align: align as keyof typeof cases })).toEqual({ alignItems });
+    const cases = { center: 'center', start: 'flex-start' } as const;
+    for (const align of keysOf(cases)) {
+      expect(layoutStyle({ align })).toEqual({ alignItems: cases[align] });
     }
   });
 
@@ -61,9 +62,9 @@ describe('splitLayout style', () => {
       between: 'space-between',
       around: 'space-around',
       end: 'flex-end',
-    };
-    for (const [justify, justifyContent] of Object.entries(cases)) {
-      expect(layoutStyle({ justify: justify as keyof typeof cases })).toEqual({ justifyContent });
+    } as const;
+    for (const justify of keysOf(cases)) {
+      expect(layoutStyle({ justify })).toEqual({ justifyContent: cases[justify] });
     }
   });
 

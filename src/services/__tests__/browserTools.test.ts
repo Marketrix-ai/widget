@@ -28,7 +28,7 @@ function expectFailure(result: ToolResult, error: string): void {
   expect(result.error).toBe(error);
 }
 
-const locationDescriptor = Object.getOwnPropertyDescriptor(window, 'location') as PropertyDescriptor;
+const locationDescriptor = Object.getOwnPropertyDescriptor(window, 'location');
 let navigations: string[] = [];
 
 beforeEach(() => {
@@ -45,7 +45,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  Object.defineProperty(window, 'location', locationDescriptor);
+  if (locationDescriptor) Object.defineProperty(window, 'location', locationDescriptor);
   vi.restoreAllMocks();
 });
 
@@ -109,7 +109,7 @@ describe('navigate constrains its target to http(s)', () => {
 
 describe('navigate reports what the browser did with a new tab', () => {
   it('succeeds when the popup really opened', async () => {
-    const open = vi.spyOn(window, 'open').mockReturnValue({} as Window);
+    const open = vi.spyOn(window, 'open').mockReturnValue(window);
 
     const result = await executeTool('navigate', { url: 'https://host.test/next', new_tab: true }, 'do');
 
@@ -260,7 +260,7 @@ describe("show mode's default explanation only fills in a blank one", () => {
 
     await executeTool('click_element', { index: 0 }, 'show', 'Click the Buy button');
 
-    expect(staged).toHaveBeenCalledWith(expect.objectContaining({ explanation: 'Click the Buy button' }));
+    expect(staged.mock.calls[0]?.[0].explanation).toBe('Click the Buy button');
   });
 
   it('falls back to the tool label when the caller leaves the explanation blank', async () => {
@@ -268,7 +268,7 @@ describe("show mode's default explanation only fills in a blank one", () => {
 
     await executeTool('click_element', { index: 0 }, 'show');
 
-    expect(staged).toHaveBeenCalledWith(expect.objectContaining({ explanation: 'Clicking element' }));
+    expect(staged.mock.calls[0]?.[0].explanation).toBe('Clicking element');
   });
 });
 
@@ -307,8 +307,8 @@ describe('typeText branches beyond input/textarea', () => {
     const element = $('div');
     Object.defineProperty(element, 'isContentEditable', { value: true });
     vi.spyOn(domService, 'getValidatedElement').mockReturnValue(element);
-    const execCommand = vi.fn().mockReturnValue(true);
-    (document as unknown as { execCommand: typeof execCommand }).execCommand = execCommand;
+    const execCommand = vi.fn<typeof document.execCommand>().mockReturnValue(true);
+    document.execCommand = execCommand;
 
     const result = await executeTool('type_text', { index: 0, text: 'hello', clear: true }, 'do');
 
@@ -339,11 +339,12 @@ describe('extract', () => {
     const result = await executeTool('extract', { extract_links: true }, 'do');
 
     assertSuccess(result);
-    const data = result.result as { links: Array<{ text: string; href: string | null }> };
-    expect(data.links).toEqual([
-      { text: '', href: '/a' },
-      { text: 'Bought', href: '/b' },
-    ]);
+    expect(result.result).toMatchObject({
+      links: [
+        { text: '', href: '/a' },
+        { text: 'Bought', href: '/b' },
+      ],
+    });
   });
 
   it('omits links entirely when extract_links is false', async () => {
@@ -353,7 +354,7 @@ describe('extract', () => {
     const result = await executeTool('extract', { extract_links: false }, 'do');
 
     assertSuccess(result);
-    expect((result.result as { links: unknown[] }).links).toEqual([]);
+    expect(result.result).toMatchObject({ links: [] });
   });
 });
 
@@ -378,8 +379,7 @@ describe('wait', () => {
 
 describe('scroll', () => {
   it('scrolls the requested number of viewport pages in the requested direction', async () => {
-    const scrollBy = vi.fn();
-    window.scrollBy = scrollBy as unknown as typeof window.scrollBy;
+    const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {});
 
     await executeTool('scroll', { direction: 'up', pages: 2 }, 'do');
 

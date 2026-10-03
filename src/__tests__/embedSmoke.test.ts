@@ -35,11 +35,12 @@ if (documentedExportNames.length === 0)
 
 let scratchDir = '';
 let caseCounter = 0;
-const importDist = () => {
+const importDist = async (): Promise<string[]> => {
   const file = resolve(scratchDir, `case-${++caseCounter}.mjs`);
   writeFileSync(file, readFileSync(distPath));
-  return import(pathToFileURL(file).href);
+  return exportNames(await import(pathToFileURL(file).href));
 };
+const exportNames = (mod: unknown): string[] => (typeof mod === 'object' && mod !== null ? Object.keys(mod) : []);
 const tick = () => new Promise<void>(r => setTimeout(r, 0));
 
 const HOST = 'https://widget-embed-smoke.example';
@@ -106,15 +107,18 @@ afterEach(() => {
 describe("embed smoke: the built dist/widget.mjs boots the way a customer's page actually gets it", () => {
   it('adds nothing to window and fires no request when no script[mtx-id] tag is present', async () => {
     const windowKeysBefore = new Set(Object.keys(window));
-    const errors: unknown[] = [];
-    const warns: unknown[] = [];
-    console.error = (...args: unknown[]) => errors.push(args);
-    console.warn = (...args: unknown[]) => warns.push(args);
+    const errors: string[] = [];
+    const warns: string[] = [];
+    console.error = (message: unknown) => errors.push(String(message));
+    console.warn = (message: unknown) => warns.push(String(message));
     let fetchCalls = 0;
-    globalThis.fetch = (() => {
-      fetchCalls++;
-      throw new Error('unexpected fetch: no script[mtx-id] tag is present');
-    }) as unknown as typeof fetch;
+    globalThis.fetch = Object.assign(
+      (): Promise<Response> => {
+        fetchCalls++;
+        throw new Error('unexpected fetch: no script[mtx-id] tag is present');
+      },
+      { preconnect: realFetch.preconnect },
+    );
 
     await importDist();
     await tick();
@@ -128,20 +132,20 @@ describe("embed smoke: the built dist/widget.mjs boots the way a customer's page
   });
 
   it('exports exactly the documented runtime surface', async () => {
-    const mod = await importDist();
+    const exportNames = await importDist();
     await tick();
 
-    expect(Object.keys(mod).sort()).toEqual([...documentedExportNames].sort());
+    expect(exportNames.sort()).toEqual([...documentedExportNames].sort());
   });
 
   it('a documented script[mtx-id] tag drives the widgetPublicSearch lookup to mtx-api-host, mounts a closed-shadow FAB at the documented z-index, and leaks only __mtx onto window', async () => {
     attachHostScriptTag();
     const windowKeysBefore = new Set(Object.keys(window));
-    const errors: unknown[] = [];
-    console.error = (...args: unknown[]) => errors.push(args);
+    const errors: string[] = [];
+    console.error = (message: unknown) => errors.push(String(message));
 
     const requests: Request[] = [];
-    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const fetchSmoke = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
       const req = input instanceof Request ? input : new Request(input, init);
       requests.push(req);
       if (req.url.endsWith('/widgetStream')) {
@@ -152,7 +156,8 @@ describe("embed smoke: the built dist/widget.mjs boots the way a customer's page
       }
       if (req.url.endsWith('/chatCreate')) return orpcJsonResponse('smoke-chat-id');
       return orpcJsonResponse(searchResult);
-    }) as unknown as typeof fetch;
+    };
+    globalThis.fetch = Object.assign(fetchSmoke, { preconnect: realFetch.preconnect });
 
     const { roots, restore } = captureShadowRoots();
     try {
@@ -168,11 +173,11 @@ describe("embed smoke: the built dist/widget.mjs boots the way a customer's page
       expect(requests.every(r => r.url.startsWith(HOST))).toBe(true);
 
       const host = document.body.querySelector('.marketrix-widget-container');
-      expect(host).toBeTruthy();
-      const shadow = roots.get(host as Element);
+      if (!host) throw new Error('the widget mounted no host container');
+      const shadow = roots.get(host);
       expect(shadow?.mode).toBe('closed');
 
-      const anchor = shadow?.root.querySelector('.mtx-fab-anchor') as HTMLElement | null;
+      const anchor = shadow?.root.querySelector<HTMLElement>('.mtx-fab-anchor');
       expect(anchor).toBeTruthy();
       expect(anchor?.style.zIndex).toBe('2147483002');
       expect(shadow?.root.querySelector('[aria-label="Open chat"]')).toBeTruthy();

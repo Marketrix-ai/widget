@@ -162,8 +162,10 @@ describe('cleanup detaches every handler it registered', () => {
     service.cleanup();
     await pending;
 
-    expect(removeDocListener).toHaveBeenCalledWith('click', expect.any(Function), { capture: true });
-    expect(removeWinListener).toHaveBeenCalledWith('scroll', expect.any(Function), { capture: true });
+    const removed = (spy: typeof removeDocListener) =>
+      spy.mock.calls.map(([type, listener, options]) => [type, typeof listener, options]);
+    expect(removed(removeDocListener)).toContainEqual(['click', 'function', { capture: true }]);
+    expect(removed(removeWinListener)).toContainEqual(['scroll', 'function', { capture: true }]);
     expect(clearIntervalSpy).toHaveBeenCalledTimes(1);
 
     resetDom();
@@ -201,12 +203,12 @@ describe('a non-click action settles on Continue, not on an element click', () =
 
 describe('the popup fit check is inclusive at every edge', () => {
   let service: ShowModeService;
-  let innerWidthDescriptor: PropertyDescriptor;
-  let innerHeightDescriptor: PropertyDescriptor;
+  let innerWidthDescriptor: PropertyDescriptor | undefined;
+  let innerHeightDescriptor: PropertyDescriptor | undefined;
 
   beforeEach(() => {
-    innerWidthDescriptor = Object.getOwnPropertyDescriptor(window, 'innerWidth') as PropertyDescriptor;
-    innerHeightDescriptor = Object.getOwnPropertyDescriptor(window, 'innerHeight') as PropertyDescriptor;
+    innerWidthDescriptor = Object.getOwnPropertyDescriptor(window, 'innerWidth');
+    innerHeightDescriptor = Object.getOwnPropertyDescriptor(window, 'innerHeight');
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1000 });
     Object.defineProperty(window, 'innerHeight', { configurable: true, value: 1000 });
     service = makeShowFixture('<button id="a"></button>');
@@ -215,8 +217,8 @@ describe('the popup fit check is inclusive at every edge', () => {
   afterEach(() => {
     service.cleanup();
     restoreGetBoundingClientRect();
-    Object.defineProperty(window, 'innerWidth', innerWidthDescriptor);
-    Object.defineProperty(window, 'innerHeight', innerHeightDescriptor);
+    if (innerWidthDescriptor) Object.defineProperty(window, 'innerWidth', innerWidthDescriptor);
+    if (innerHeightDescriptor) Object.defineProperty(window, 'innerHeight', innerHeightDescriptor);
     resetDom();
   });
 

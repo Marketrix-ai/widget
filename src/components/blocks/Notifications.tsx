@@ -121,13 +121,13 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
     <Toast.Portal container={container ?? undefined}>
       <Toast.Viewport
         className='mtx-toast-viewport'
-        style={
-          {
-            zIndex: LAYER_TOKENS.toast,
+        style={{
+          zIndex: LAYER_TOKENS.toast,
+          ...{
             '--mtx-toast-edge': `${EDGE_OFFSET_PX}px`,
             '--mtx-toast-lift': `${launcherBelow ? EDGE_OFFSET_PX + LAUNCHER_SIZE_PX : 0}px`,
-          } as React.CSSProperties
-        }
+          },
+        }}
       >
         <NotificationList />
       </Toast.Viewport>

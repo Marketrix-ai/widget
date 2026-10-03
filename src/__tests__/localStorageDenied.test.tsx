@@ -3,7 +3,7 @@
  * page throws on every `localStorage` access, warning at most once per kind.
  */
 import { fireEvent, waitFor, within } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'bun:test';
 
 import * as chatThread from '../services/chatThread';
 import { scopeStorageTo } from '../services/StorageService';
@@ -11,7 +11,7 @@ import { streamClient } from '../services/StreamClient';
 import { dragFabAndResize, getComposer, openChatTab, openWidget, renderWidget } from '../test/renderWidget';
 
 describe('a host page that denies localStorage outright', () => {
-  let warnSpy: ReturnType<typeof vi.spyOn>;
+  let warnSpy: Mock<typeof console.warn>;
 
   beforeEach(() => {
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {

@@ -5,21 +5,22 @@
  * Unknown settings keys are ignored, since the api may ship a new setting before this published bundle
  * knows it. `widgetPublicSearch` returns only live widgets, so a returned row is active.
  */
-import { z } from 'zod';
+import type { z } from 'zod';
 
 import { type ApplicationWidgetPublicData, getSdk } from '../sdk';
+import { keysOf, pickKeys } from '../sdk/contracts/common';
 import { WidgetSettingsWriteSchema } from '../sdk/contracts/widgetSettings';
 import type { MarketrixConfig, ValidWidgetConfig } from '../types';
 import { errorMessage } from '../utils/errors';
 
-const RenderedSettingsSchema = z.object(WidgetSettingsWriteSchema.shape);
-
-export type WidgetRenderedSettings = z.infer<typeof RenderedSettingsSchema>;
+export type WidgetRenderedSettings = z.infer<typeof WidgetSettingsWriteSchema>;
 
 export type CredentialedConfig = ValidWidgetConfig & { mtxId: string; mtxKey: string };
 
-export function parseWidgetSettingsOrThrow(value: unknown): WidgetRenderedSettings {
-  const parsed = RenderedSettingsSchema.safeParse(value);
+export function parseWidgetSettingsOrThrow(value: {
+  [K in keyof WidgetRenderedSettings]?: unknown;
+}): WidgetRenderedSettings {
+  const parsed = WidgetSettingsWriteSchema.safeParse(pickKeys(value, keysOf(WidgetSettingsWriteSchema.shape)));
   if (parsed.success) return parsed.data;
   const invalidFields = new Set(parsed.error.issues.map(issue => String(issue.path[0] ?? 'settings')));
   throw new Error(`Widget settings are invalid: ${[...invalidFields].join(', ')}`);

@@ -81,7 +81,7 @@ const RESOLVE: { [K in keyof LayoutValues]: (value: LayoutValues[K]) => CSSPrope
   height: () => ({ height: '100%' }),
   minWidth: () => ({ minWidth: 0 }),
   minHeight: () => ({ minHeight: 0 }),
-  border: v =>
+  border: (v): CSSProperties =>
     v === false
       ? {}
       : v === true

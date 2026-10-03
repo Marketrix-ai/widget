@@ -9,8 +9,9 @@ import { resolve } from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'bun:test';
 
+import * as Mount from '../mount';
 import * as WidgetService from '../services/WidgetService';
-import { getMockWidgetConfig } from '../test/fixtures';
+import { freshCopyOf, getMockWidgetConfig } from '../test/fixtures';
 
 const loaderSource = readFileSync(resolve(process.cwd(), 'public/loader.js'), 'utf8');
 
@@ -64,13 +65,14 @@ let mountImportCount = 0;
 const spyShadowRoots = () => {
   const attach = vi.spyOn(HTMLElement.prototype, 'attachShadow');
   return (n: number): ShadowRoot => {
-    const root = attach.mock.results[n]?.value;
-    if (!(root instanceof ShadowRoot)) throw new Error(`attachShadow call ${n} returned no shadow root`);
-    return root;
+    const result = attach.mock.results[n];
+    if (!(result?.value instanceof ShadowRoot)) throw new Error(`attachShadow call ${n} returned no shadow root`);
+    return result.value;
   };
 };
 
-const importMount = () => import(`../mount.tsx?t=${mountImportCount++}`);
+const importMount = async (): Promise<typeof Mount> =>
+  freshCopyOf(await import(`../mount.tsx?t=${mountImportCount++}`), Mount);
 
 const runAutoInit = async () => {
   const init = vi.spyOn(WidgetService, 'loadWidgetConfig').mockReturnValue(new Promise(() => {}));
@@ -82,7 +84,7 @@ const runAutoInit = async () => {
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
-  delete (document as { currentScript?: unknown }).currentScript;
+  Reflect.deleteProperty(document, 'currentScript');
   resetDocument();
 });
 
@@ -206,7 +208,7 @@ describe('widget public entry paths', () => {
     expect(missing).toEqual([]);
   });
 
-  it.each([
+  it.each<[string, Record<string, string>]>([
     ['loading', { 'mtx-api-host': 'https://api.test' }],
     ['missing-host', {}],
   ])('applies the style nonce to the %s host-page notice', async (_case, attributes) => {

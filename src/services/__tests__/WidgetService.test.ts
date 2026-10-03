@@ -9,15 +9,13 @@
 import { ORPCError } from '@orpc/client';
 import { beforeEach, describe, expect, it, vi } from 'bun:test';
 
-import { type ApplicationWidgetPublicData, getSdk } from '../../sdk';
+import type { ApplicationWidgetPublicData, WidgetClient } from '../../sdk';
 import { validSettings } from '../../test/fixtures';
-import { mocked, mockSdkModule, restoreModuleAfterAll } from '../../test/vi-compat';
+import { mockSdk } from '../../test/vi-compat';
 import { loadWidgetConfig } from '../WidgetService';
 
-vi.mock('../../sdk', () => mockSdkModule({ widgetPublicSearch: vi.fn() }));
-restoreModuleAfterAll('../../sdk', () => import('../../sdk/index.ts?real'));
-
-const mockSdk = mocked(getSdk());
+const widgetPublicSearch = vi.fn<WidgetClient['widgetPublicSearch']>();
+mockSdk({ widgetPublicSearch });
 const settings = validSettings();
 
 const activeWidget = (overrides: Partial<ApplicationWidgetPublicData> = {}): ApplicationWidgetPublicData => ({
@@ -38,7 +36,7 @@ beforeEach(() => {
 
 describe('loadWidgetConfig', () => {
   it('names the configured api host when the api is unreachable', async () => {
-    mockSdk.widgetPublicSearch.mockRejectedValue(new Error('Failed to fetch'));
+    widgetPublicSearch.mockRejectedValue(new Error('Failed to fetch'));
 
     await expect(
       loadWidgetConfig({ mtxId: 'unreachable-with-host', mtxKey: 'test-key', mtxApiHost: 'https://api.test' }),
@@ -46,7 +44,7 @@ describe('loadWidgetConfig', () => {
   });
 
   it('loads the widget in one search and returns one schema-validated config', async () => {
-    mockSdk.widgetPublicSearch.mockResolvedValue(searchResult());
+    widgetPublicSearch.mockResolvedValue(searchResult());
 
     const config = await loadWidgetConfig({
       mtxId: 'load-once',
@@ -55,44 +53,34 @@ describe('loadWidgetConfig', () => {
       show_widget: false,
     });
 
-    expect(mockSdk.widgetPublicSearch).toHaveBeenCalledTimes(1);
+    expect(widgetPublicSearch).toHaveBeenCalledTimes(1);
     expect(config).toMatchObject({ mtxId: 'load-once', mtxKey: 'test-key', show_widget: false });
   });
 
   it('sends only the credential pair to the boot call, never viewport or other host page data', async () => {
-    mockSdk.widgetPublicSearch.mockResolvedValue(searchResult());
+    widgetPublicSearch.mockResolvedValue(searchResult());
 
     await loadWidgetConfig({ mtxId: 'creds-only', mtxKey: 'test-key', mtxApiHost: 'https://api.test' });
 
-    expect(mockSdk.widgetPublicSearch).toHaveBeenCalledWith({
+    expect(widgetPublicSearch).toHaveBeenCalledWith({
       marketrix_id: 'creds-only',
       marketrix_key: 'test-key',
     });
   });
 
   it('rejects an invalid merged settings response with the schema field', async () => {
-    mockSdk.widgetPublicSearch.mockResolvedValue({
-      items: [
-        {
-          ...activeWidget(),
-          widget_settings: { ...settings, widget_position: 'somewhere' } as unknown as typeof settings,
-        },
-      ],
-      total: 1,
-      limit: 20,
-      offset: 0,
-    });
+    const offContract = { ...settings };
+    Reflect.set(offContract, 'widget_position', 'somewhere');
+    widgetPublicSearch.mockResolvedValue(searchResult({ widget_settings: offContract }));
 
     await expect(
       loadWidgetConfig({ mtxId: 'invalid-settings', mtxKey: 'test-key', mtxApiHost: 'https://api.test' }),
     ).rejects.toThrow(/widget_position/);
-    expect(mockSdk.widgetPublicSearch).toHaveBeenCalledTimes(1);
+    expect(widgetPublicSearch).toHaveBeenCalledTimes(1);
   });
 
   it("reports the api's refusal of unknown credentials as a failed validation", async () => {
-    mockSdk.widgetPublicSearch.mockRejectedValue(
-      new ORPCError('UNAUTHORIZED', { message: 'Invalid widget credentials' }),
-    );
+    widgetPublicSearch.mockRejectedValue(new ORPCError('UNAUTHORIZED', { message: 'Invalid widget credentials' }));
 
     await expect(
       loadWidgetConfig({ mtxId: 'failed-search', mtxKey: 'test-key', mtxApiHost: 'https://api.test' }),
@@ -100,7 +88,7 @@ describe('loadWidgetConfig', () => {
   });
 
   it('caches the credentialed lookup so a repeat call for the same mtx-id never re-searches', async () => {
-    mockSdk.widgetPublicSearch.mockResolvedValue(searchResult());
+    widgetPublicSearch.mockResolvedValue(searchResult());
 
     const first = await loadWidgetConfig({
       mtxId: 'cache-me',
@@ -115,14 +103,14 @@ describe('loadWidgetConfig', () => {
       show_widget: false,
     });
 
-    expect(mockSdk.widgetPublicSearch).toHaveBeenCalledTimes(1);
+    expect(widgetPublicSearch).toHaveBeenCalledTimes(1);
     expect(first).toMatchObject({ show_widget: true });
     expect(second).toMatchObject({ show_widget: false });
   });
 
   it('shares one in-flight lookup between concurrent callers for the same mtx-id', async () => {
     let resolveSearch!: (value: ReturnType<typeof searchResult>) => void;
-    mockSdk.widgetPublicSearch.mockReturnValue(
+    widgetPublicSearch.mockReturnValue(
       new Promise(resolve => {
         resolveSearch = resolve;
       }),
@@ -133,23 +121,23 @@ describe('loadWidgetConfig', () => {
     resolveSearch(searchResult());
 
     await Promise.all([first, second]);
-    expect(mockSdk.widgetPublicSearch).toHaveBeenCalledTimes(1);
+    expect(widgetPublicSearch).toHaveBeenCalledTimes(1);
   });
 
   it('never caches a failed lookup, so the next call retries against the api', async () => {
-    mockSdk.widgetPublicSearch.mockRejectedValueOnce(new Error('offline'));
+    widgetPublicSearch.mockRejectedValueOnce(new Error('offline'));
     await expect(
       loadWidgetConfig({ mtxId: 'retry-after-failure', mtxKey: 'test-key', mtxApiHost: 'https://api.test' }),
     ).rejects.toThrow('offline');
 
-    mockSdk.widgetPublicSearch.mockResolvedValueOnce(searchResult());
+    widgetPublicSearch.mockResolvedValueOnce(searchResult());
     const config = await loadWidgetConfig({
       mtxId: 'retry-after-failure',
       mtxKey: 'test-key',
       mtxApiHost: 'https://api.test',
     });
 
-    expect(mockSdk.widgetPublicSearch).toHaveBeenCalledTimes(2);
+    expect(widgetPublicSearch).toHaveBeenCalledTimes(2);
     expect(config).toMatchObject({ mtxId: 'retry-after-failure', isPreviewMode: false });
   });
 });

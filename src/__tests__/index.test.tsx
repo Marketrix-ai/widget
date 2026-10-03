@@ -21,7 +21,6 @@ import { streamClient } from '../services/StreamClient';
 import type { CredentialedConfig } from '../services/WidgetService';
 import * as WidgetService from '../services/WidgetService';
 import { agentMessage, credentialedConfig, mountTarget, validSettings } from '../test/fixtures';
-import type { MarketrixConfig, WidgetSettingsData } from '../types';
 
 const expectNotMounted = (container: HTMLElement) => {
   expect(container.querySelector('.marketrix-widget-container')).toBeNull();
@@ -90,10 +89,8 @@ describe('public widget lifecycle', () => {
   it('a config the settings schema refuses rejects naming the fields that failed instead of mounting silently', async () => {
     const container = mountTarget();
     document.body.append(container);
-    const broken = {
-      ...validSettings(),
-      widget_position: 'middle',
-    } as unknown as WidgetSettingsData;
+    const broken = validSettings();
+    Reflect.set(broken, 'widget_position', 'middle');
 
     await expect(mountWidget({ settings: broken, container })).rejects.toThrow('widget_position');
 
@@ -132,9 +129,9 @@ describe('public widget lifecycle', () => {
     const container = mountTarget();
     document.body.append(container);
 
-    await act(() =>
-      expect(initWidget({ mtxId: 'no-host', mtxKey: 'key' } as MarketrixConfig, container)).rejects.toThrow(),
-    );
+    const hostless = { mtxId: 'no-host', mtxKey: 'key', mtxApiHost: 'https://api.test' };
+    Reflect.deleteProperty(hostless, 'mtxApiHost');
+    await act(() => expect(initWidget(hostless, container)).rejects.toThrow());
 
     expect(load).not.toHaveBeenCalled();
     expectNotMounted(container);
@@ -281,7 +278,8 @@ describe('public widget lifecycle', () => {
     const settings = validSettings();
 
     const { container: renderedRoot } = render(<MarketrixWidgetPreview settings={settings} />);
-    const ownDiv = renderedRoot.firstElementChild as HTMLElement;
+    const ownDiv = renderedRoot.firstElementChild;
+    if (!(ownDiv instanceof HTMLElement)) throw new Error('the preview rendered no div of its own');
 
     await waitFor(() => expect(ownDiv.querySelector('.marketrix-widget-container')).toBeTruthy());
     expect(renderedRoot.querySelectorAll(':scope > .marketrix-widget-container')).toHaveLength(0);

@@ -6,11 +6,12 @@
  * Only intervals `ShowModeService` starts directly are counted, since jsdom's animation-frame clock and a
  * previous test's teardown also start intervals that settle on their own.
  */
-import { record } from '@rrweb/record';
+import type { record as recordFn } from '@rrweb/record';
 import { act, fireEvent, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import { initWidget, unmountWidget } from '../index';
+import type { WidgetClient } from '../sdk';
 import * as chatThread from '../services/chatThread';
 import { showModeService } from '../services/ShowModeService';
 import { writeChatSnapshot } from '../services/StorageService';
@@ -18,11 +19,11 @@ import { streamClient } from '../services/StreamClient';
 import * as WidgetService from '../services/WidgetService';
 import { $, credentialedConfig } from '../test/fixtures';
 import { dragFabAndResize, renderWidget } from '../test/renderWidget';
-import { mocked, mockSdkModule, restoreModuleAfterAll } from '../test/vi-compat';
+import { mockSdk } from '../test/vi-compat';
 
-vi.mock('@rrweb/record', () => ({ record: vi.fn(() => vi.fn()) }));
-vi.mock('../sdk', () => mockSdkModule({ widgetMessagePost: vi.fn().mockResolvedValue({ success: true }) }));
-restoreModuleAfterAll('../sdk', () => import('../sdk/index.ts?real'));
+const record = vi.fn<(...args: Parameters<typeof recordFn>) => ReturnType<typeof recordFn>>(() => vi.fn());
+vi.mock('@rrweb/record', () => ({ record }));
+mockSdk({ widgetMessagePost: vi.fn<WidgetClient['widgetMessagePost']>().mockResolvedValue({ success: true }) });
 
 interface Registry {
   openListeners: number;
@@ -33,62 +34,59 @@ interface Registry {
 
 const FRAMEWORK_OWNED_TYPES = new Set(['selectionchange']);
 
-function patchTarget(target: Window | Document, open: { type: string; listener: unknown }[]): () => void {
+function patchTarget(
+  target: EventTarget,
+  open: { type: string; listener: EventListenerOrEventListenerObject | null }[],
+): () => void {
   const realAdd = target.addEventListener.bind(target);
   const realRemove = target.removeEventListener.bind(target);
-  target.addEventListener = ((type: string, listener: unknown, options?: unknown) => {
+  const add = vi.spyOn(target, 'addEventListener').mockImplementation((type, listener, options) => {
     if (!FRAMEWORK_OWNED_TYPES.has(type)) open.push({ type, listener });
-    return realAdd(type, listener as EventListenerOrEventListenerObject, options as AddEventListenerOptions);
-  }) as typeof target.addEventListener;
-  target.removeEventListener = ((type: string, listener: unknown, options?: unknown) => {
+    realAdd(type, listener, options);
+  });
+  const remove = vi.spyOn(target, 'removeEventListener').mockImplementation((type, listener, options) => {
     const idx = open.findIndex(e => e.type === type && e.listener === listener);
     if (idx !== -1) open.splice(idx, 1);
-    return realRemove(type, listener as EventListenerOrEventListenerObject, options as EventListenerOptions);
-  }) as typeof target.removeEventListener;
+    realRemove(type, listener, options);
+  });
   return () => {
-    target.addEventListener = realAdd;
-    target.removeEventListener = realRemove;
+    add.mockRestore();
+    remove.mockRestore();
   };
 }
 
 function installRegistry(): Registry {
-  const open: { type: string; listener: unknown }[] = [];
+  const open: { type: string; listener: EventListenerOrEventListenerObject | null }[] = [];
   const restoreWindow = patchTarget(window, open);
   const restoreDocument = patchTarget(document, open);
 
   const realSetInterval = globalThis.setInterval;
   const realClearInterval = globalThis.clearInterval;
-  const liveIntervals = new Set<ReturnType<typeof setInterval>>();
-  globalThis.setInterval = ((fn: TimerHandler, ms?: number, ...rest: unknown[]) => {
-    const id = realSetInterval(fn as never, ms, ...rest);
-    if (new Error().stack?.split('\n')[2]?.includes('ShowModeService')) liveIntervals.add(id);
-    return id;
-  }) as unknown as typeof setInterval;
-  globalThis.clearInterval = ((id?: Parameters<typeof clearInterval>[0]) => {
-    if (id !== undefined) liveIntervals.delete(id as ReturnType<typeof setInterval>);
-    return realClearInterval(id as never);
-  }) as typeof clearInterval;
-
   const realSetTimeout = globalThis.setTimeout;
   const realClearTimeout = globalThis.clearTimeout;
+  const liveIntervals = new Set<ReturnType<typeof setTimeout>>();
   const liveTimeouts = new Set<ReturnType<typeof setTimeout>>();
-  globalThis.setTimeout = ((fn: (...fnArgs: unknown[]) => void, ms?: number, ...rest: unknown[]) => {
-    const box: { id?: ReturnType<typeof setTimeout> } = {};
-    box.id = realSetTimeout(
-      (...fnArgs: unknown[]) => {
-        liveTimeouts.delete(box.id as ReturnType<typeof setTimeout>);
-        fn(...fnArgs);
-      },
-      ms,
-      ...rest,
-    ) as ReturnType<typeof setTimeout>;
-    liveTimeouts.add(box.id);
-    return box.id;
-  }) as unknown as typeof setTimeout;
-  globalThis.clearTimeout = ((id?: Parameters<typeof clearTimeout>[0]) => {
-    if (id !== undefined) liveTimeouts.delete(id as ReturnType<typeof setTimeout>);
-    return realClearTimeout(id as never);
-  }) as typeof clearTimeout;
+  Reflect.set(globalThis, 'setInterval', (callback: () => void, ms?: number): ReturnType<typeof setTimeout> => {
+    const id = realSetInterval(callback, ms);
+    if (new Error().stack?.split('\n')[2]?.includes('ShowModeService')) liveIntervals.add(id);
+    return id;
+  });
+  Reflect.set(globalThis, 'clearInterval', (id?: ReturnType<typeof setTimeout>): void => {
+    if (id !== undefined) liveIntervals.delete(id);
+    realClearInterval(id);
+  });
+  Reflect.set(globalThis, 'setTimeout', (callback: () => void, ms?: number): ReturnType<typeof setTimeout> => {
+    const id = realSetTimeout(() => {
+      liveTimeouts.delete(id);
+      callback();
+    }, ms);
+    liveTimeouts.add(id);
+    return id;
+  });
+  Reflect.set(globalThis, 'clearTimeout', (id?: ReturnType<typeof setTimeout>): void => {
+    if (id !== undefined) liveTimeouts.delete(id);
+    realClearTimeout(id);
+  });
 
   return {
     get openListeners() {
@@ -103,10 +101,10 @@ function installRegistry(): Registry {
     restore: () => {
       restoreWindow();
       restoreDocument();
-      globalThis.setInterval = realSetInterval;
-      globalThis.clearInterval = realClearInterval;
-      globalThis.setTimeout = realSetTimeout;
-      globalThis.clearTimeout = realClearTimeout;
+      Reflect.set(globalThis, 'setInterval', realSetInterval);
+      Reflect.set(globalThis, 'clearInterval', realClearInterval);
+      Reflect.set(globalThis, 'setTimeout', realSetTimeout);
+      Reflect.set(globalThis, 'clearTimeout', realClearTimeout);
     },
   };
 }
@@ -240,7 +238,7 @@ describe('unmountWidget stops an active rrweb session recording started by the r
     vi.spyOn(streamClient, 'connect').mockResolvedValue();
     vi.spyOn(streamClient, 'ready').mockResolvedValue();
     const stopRecording = vi.fn();
-    mocked(record).mockReturnValue(stopRecording);
+    record.mockReturnValue(stopRecording);
 
     const container = document.createElement('div');
     document.body.appendChild(container);

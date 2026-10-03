@@ -8,7 +8,7 @@ import { describe, expect, it, vi } from 'bun:test';
 
 import { ShellTabBar } from '../ShellTabBar';
 
-const renderTabs = (value: 'home' | 'chat', onValueChange = vi.fn()) =>
+const renderTabs = (value: 'home' | 'chat', onValueChange = vi.fn<(value: unknown) => void>()) =>
   render(
     <Tabs.Root value={value} onValueChange={onValueChange}>
       <ShellTabBar />
@@ -34,10 +34,10 @@ describe('ShellTabBar', () => {
   });
 
   it('reports the tab the user picks', () => {
-    const onValueChange = vi.fn();
+    const onValueChange = vi.fn<(value: unknown) => void>();
     renderTabs('home', onValueChange);
 
     fireEvent.click(screen.getByRole('tab', { name: /chat/i }));
-    expect(onValueChange).toHaveBeenCalledWith('chat', expect.anything());
+    expect(onValueChange.mock.calls[0]?.[0]).toBe('chat');
   });
 });
