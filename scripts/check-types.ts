@@ -4,7 +4,9 @@
  * every variable, parameter, property, binding and function return, and refuses `any`, `object`, `{}`, a
  * string index of `unknown`, an arbitrary-JSON union, and `unknown` itself except as an annotated parameter or a catch binding, the one honest
  * type of input still to be parsed. It also refuses an `any` value flowing into an initializer, return, property or an
- * argument not typed `unknown`, type assertions other than `as const`, `@ts-` directives and loose zod builders; Python files go to `check_types.py` and Go files may not use `any` or `interface{}`.
+ * argument not typed `unknown`, a generic overload over a non-generic implementation (a cast by signature), type
+ * assertions other than `as const`, `@ts-` directives and loose zod builders; Python files go to `check_types.py` and
+ * Go files may not use `any` or `interface{}`.
  * Generated code is skipped exactly as `check-comments.ts` skips it, so a mirror is judged in the repo it comes from.
  */
 import { execFileSync } from 'node:child_process';
@@ -175,6 +177,19 @@ function checkTsSource(checker: ts.TypeChecker, source: ts.SourceFile, file: str
       flows(node.initializer, `\`${node.name.getText(source)}\``);
     }
     if (ts.isReturnStatement(node)) flows(node.expression, 'a return');
+    if ((ts.isFunctionDeclaration(node) || ts.isMethodDeclaration(node)) && node.body && !node.typeParameters?.length) {
+      const symbol = node.name ? checker.getSymbolAtLocation(node.name) : undefined;
+      const overloads = (symbol?.declarations ?? []).filter(
+        declaration =>
+          declaration !== node && ts.isFunctionLike(declaration) && !('body' in declaration && declaration.body),
+      );
+      if (overloads.some(overload => ts.isFunctionLike(overload) && overload.typeParameters?.length)) {
+        add(
+          node,
+          `overload implementation \`${node.name?.getText(source) ?? ''}\` erases its overloads' type parameters`,
+        );
+      }
+    }
     if (ts.isArrowFunction(node) && !ts.isBlock(node.body)) flows(node.body, 'a return');
     if (ts.isPropertyAssignment(node)) flows(node.initializer, `property \`${node.name.getText(source)}\``);
     if (ts.isCallExpression(node) || ts.isNewExpression(node)) {
