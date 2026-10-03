@@ -2,7 +2,7 @@
  * The one strict-typing gate for every repo: no declaration may stand on a loose type. `checkTypes` builds each
  * tracked tsconfig's program (a strict default for TypeScript outside one), asks the type checker for the type of
  * every variable, parameter, property, binding and function return, and refuses `any`, `object`, `{}`, a
- * string index of `unknown`, and `unknown` itself except as an annotated parameter or a catch binding, the one honest
+ * string index of `unknown`, an arbitrary-JSON union, and `unknown` itself except as an annotated parameter or a catch binding, the one honest
  * type of input still to be parsed. It also refuses an `any` value flowing into an initializer, return, property or an
  * argument not typed `unknown`, type assertions other than `as const`, `@ts-` directives and loose zod builders; Python files go to `check_types.py` and Go files may not use `any` or `interface{}`.
  * Generated code is skipped exactly as `check-comments.ts` skips it, so a mirror is judged in the repo it comes from.
@@ -69,6 +69,20 @@ const isReference = (type: ts.ObjectType): type is ts.TypeReference =>
 const fromLibrary = (symbol: ts.Symbol): boolean =>
   (symbol.declarations ?? []).every(declaration => declaration.getSourceFile().fileName.includes('/node_modules/'));
 
+function isArbitraryJson(checker: ts.TypeChecker, type: ts.UnionType): boolean {
+  const has = (flag: ts.TypeFlags): boolean => type.types.some(member => (member.flags & flag) !== 0);
+  if (!has(ts.TypeFlags.StringLike) || !has(ts.TypeFlags.NumberLike) || !has(ts.TypeFlags.Null)) return false;
+  return type.types.some(member => {
+    const index = checker.getIndexInfosOfType(member).find(info => info.keyType.flags & ts.TypeFlags.String);
+    return (
+      index !== undefined &&
+      (index.type === type ||
+        (index.type.isUnion() &&
+          index.type.types.some(part => type.types.includes(part) && part.flags & ts.TypeFlags.Object)))
+    );
+  });
+}
+
 function looseness(checker: ts.TypeChecker, type: ts.Type, depth = 0, seen = new Set<ts.Type>()): string | undefined {
   if (seen.has(type)) return undefined;
   seen.add(type);
@@ -77,6 +91,7 @@ function looseness(checker: ts.TypeChecker, type: ts.Type, depth = 0, seen = new
   if (type.flags & ts.TypeFlags.Any) return 'any';
   if (type.flags & ts.TypeFlags.Unknown) return 'unknown';
   if (type.flags & ts.TypeFlags.NonPrimitive) return 'object';
+  if (type.isUnion() && isArbitraryJson(checker, type)) return 'arbitrary JSON';
   if (type.isUnionOrIntersection()) {
     for (const part of type.types) {
       const found = looseness(checker, part, depth, seen);
