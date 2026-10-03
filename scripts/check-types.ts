@@ -5,8 +5,9 @@
  * string index of `unknown`, an arbitrary-JSON union, and `unknown` itself except as an annotated parameter or a catch binding, the one honest
  * type of input still to be parsed. It also refuses an `any` value flowing into an initializer, return, property or an
  * argument not typed `unknown`, a generic overload over a non-generic implementation (a cast by signature), type
- * assertions other than `as const`, `@ts-` directives and loose zod builders; Python files go to `check_types.py` and
- * Go files may not use `any` or `interface{}`.
+ * assertions other than `as const`, `@ts-` directives and loose zod builders; Python files go to `check_types.py`, run
+ * through `uv` on the repo's own `.python-version` (newer syntax fails to parse on an older interpreter), and Go files
+ * may not use `any` or `interface{}`.
  * Generated code is skipped exactly as `check-comments.ts` skips it, so a mirror is judged in the repo it comes from.
  */
 import { execFileSync } from 'node:child_process';
@@ -319,10 +320,15 @@ function checkGoFiles(root: string, files: string[]): Issue[] {
 
 function checkPythonFiles(root: string, files: string[]): Issue[] {
   if (files.length === 0) return [];
-  const output = execFileSync('python3', [join(import.meta.dir, 'check_types.py'), root, ...files], {
-    encoding: 'utf8',
-    maxBuffer: 64 << 20,
-  });
+  const output = execFileSync(
+    'uv',
+    ['run', '--no-project', '--quiet', 'python3', join(import.meta.dir, 'check_types.py'), root, ...files],
+    {
+      cwd: root,
+      encoding: 'utf8',
+      maxBuffer: 64 << 20,
+    },
+  );
   return output
     .split('\n')
     .filter(Boolean)
