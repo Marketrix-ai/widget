@@ -162,8 +162,10 @@ describe('cleanup detaches every handler it registered', () => {
     service.cleanup();
     await pending;
 
-    expect(removeDocListener).toHaveBeenCalledWith('click', expect.any(Function), { capture: true });
-    expect(removeWinListener).toHaveBeenCalledWith('scroll', expect.any(Function), { capture: true });
+    const removed = (spy: typeof removeDocListener) =>
+      spy.mock.calls.map(([type, listener, options]) => [type, typeof listener, options]);
+    expect(removed(removeDocListener)).toContainEqual(['click', 'function', { capture: true }]);
+    expect(removed(removeWinListener)).toContainEqual(['scroll', 'function', { capture: true }]);
     expect(clearIntervalSpy).toHaveBeenCalledTimes(1);
 
     resetDom();

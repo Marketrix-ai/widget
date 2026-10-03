@@ -4,7 +4,7 @@
  * jest-dom matchers, and `resetDom` clears the body after each test. The matchers are required, not imported, because
  * testing-library needs the global `document` while it loads.
  */
-import { afterEach, expect } from 'bun:test';
+import { afterEach, type CustomMatcher, expect } from 'bun:test';
 import { JSDOM } from 'jsdom';
 
 const dom = new JSDOM('<!doctype html><html><body></body></html>', {
@@ -81,8 +81,15 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-argument
-expect.extend(require('@testing-library/jest-dom/matchers'));
+type Matchers = Record<string, CustomMatcher<unknown, unknown[]>>;
+const isMatchers = (mod: unknown): mod is Matchers =>
+  typeof mod === 'object' && mod !== null && Object.keys(mod).every(key => typeof Reflect.get(mod, key) === 'function');
+function matchersOf(mod: unknown): Matchers {
+  if (!isMatchers(mod)) throw new Error('@testing-library/jest-dom/matchers exports something other than matchers');
+  return mod;
+}
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+expect.extend(matchersOf(require('@testing-library/jest-dom/matchers')));
 
 export function resetDom(): void {
   document.body.replaceChildren();

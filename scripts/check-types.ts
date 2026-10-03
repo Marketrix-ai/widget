@@ -3,8 +3,8 @@
  * tracked tsconfig's program (a strict default for TypeScript outside one), asks the type checker for the type of
  * every variable, parameter, property, binding and function return, and refuses `any`, `object`, `{}`, a
  * string index of `unknown`, and `unknown` itself except as an annotated parameter or a catch binding, the one honest
- * type of input still to be parsed. It also refuses type assertions other than `as const`, `@ts-` directives and
- * loose zod builders; Python files go to `check_types.py` and Go files may not use `any` or `interface{}`.
+ * type of input still to be parsed. It also refuses an `any` value flowing into an initializer, return, property or an
+ * argument not typed `unknown`, type assertions other than `as const`, `@ts-` directives and loose zod builders; Python files go to `check_types.py` and Go files may not use `any` or `interface{}`.
  * Generated code is skipped exactly as `check-comments.ts` skips it, so a mirror is judged in the repo it comes from.
  */
 import { execFileSync } from 'node:child_process';
@@ -150,7 +150,28 @@ function checkTsSource(checker: ts.TypeChecker, source: ts.SourceFile, file: str
     if (!found || (found === 'unknown' && unknownAllowed(node))) return;
     add(node, `${what} \`${declaredName(node, source)}\` is ${found}`);
   };
+  const isAny = (expression: ts.Expression): boolean =>
+    (checker.getTypeAtLocation(expression).flags & ts.TypeFlags.Any) !== 0;
+  const flows = (expression: ts.Expression | undefined, into: string): void => {
+    if (expression && isAny(expression)) add(expression, `an \`any\` value flows into ${into}`);
+  };
   const visit = (node: ts.Node): void => {
+    if ((ts.isVariableDeclaration(node) || ts.isPropertyDeclaration(node) || ts.isParameter(node)) && node.type) {
+      flows(node.initializer, `\`${node.name.getText(source)}\``);
+    }
+    if (ts.isReturnStatement(node)) flows(node.expression, 'a return');
+    if (ts.isArrowFunction(node) && !ts.isBlock(node.body)) flows(node.body, 'a return');
+    if (ts.isPropertyAssignment(node)) flows(node.initializer, `property \`${node.name.getText(source)}\``);
+    if (ts.isCallExpression(node) || ts.isNewExpression(node)) {
+      const signature = checker.getResolvedSignature(node);
+      (node.arguments ?? []).forEach((argument, index) => {
+        if (!isAny(argument) || !signature) return;
+        const parameter = signature.getParameters()[Math.min(index, signature.getParameters().length - 1)];
+        const expected = parameter ? checker.getTypeOfSymbol(parameter) : undefined;
+        const open = expected && expected.flags & (ts.TypeFlags.Unknown | ts.TypeFlags.Any);
+        if (!open) add(argument, 'an `any` value flows into an argument');
+      });
+    }
     if (
       ts.isVariableDeclaration(node) ||
       ts.isParameter(node) ||

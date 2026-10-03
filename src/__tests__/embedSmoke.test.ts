@@ -38,8 +38,9 @@ let caseCounter = 0;
 const importDist = async (): Promise<string[]> => {
   const file = resolve(scratchDir, `case-${++caseCounter}.mjs`);
   writeFileSync(file, readFileSync(distPath));
-  return Object.keys(await import(pathToFileURL(file).href));
+  return exportNames(await import(pathToFileURL(file).href));
 };
+const exportNames = (mod: unknown): string[] => (typeof mod === 'object' && mod !== null ? Object.keys(mod) : []);
 const tick = () => new Promise<void>(r => setTimeout(r, 0));
 
 const HOST = 'https://widget-embed-smoke.example';

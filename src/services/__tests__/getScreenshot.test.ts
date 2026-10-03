@@ -23,7 +23,7 @@ describe('get_screenshot with no active screen share', () => {
 
   it('fails instead of prompting a new share, which would bypass the visitor Deny', async () => {
     const result = await executeTool('get_screenshot', {}, 'do');
-    expect(result).toMatchObject({ success: false, error: expect.stringContaining('not sharing') });
+    expect(result.success ? '' : result.error).toContain('not sharing');
     expect(document.querySelector('video')).toBeNull();
   });
 });
@@ -47,7 +47,8 @@ describe('get_screenshot on a stream that never delivers a frame', () => {
 
     await advanceTimersByTimeAsync(5000);
 
-    expect(await result).toMatchObject({ success: false, error: expect.stringContaining('no frame') });
+    const settled = await result;
+    expect(settled.success ? '' : settled.error).toContain('no frame');
     expect(document.querySelector('video')).toBeNull();
   });
 });

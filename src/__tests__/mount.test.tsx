@@ -9,9 +9,9 @@ import { resolve } from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'bun:test';
 
-import type * as Mount from '../mount';
+import * as Mount from '../mount';
 import * as WidgetService from '../services/WidgetService';
-import { getMockWidgetConfig } from '../test/fixtures';
+import { freshCopyOf, getMockWidgetConfig } from '../test/fixtures';
 
 const loaderSource = readFileSync(resolve(process.cwd(), 'public/loader.js'), 'utf8');
 
@@ -71,7 +71,8 @@ const spyShadowRoots = () => {
   };
 };
 
-const importMount = async (): Promise<typeof Mount> => import(`../mount.tsx?t=${mountImportCount++}`);
+const importMount = async (): Promise<typeof Mount> =>
+  freshCopyOf(await import(`../mount.tsx?t=${mountImportCount++}`), Mount);
 
 const runAutoInit = async () => {
   const init = vi.spyOn(WidgetService, 'loadWidgetConfig').mockReturnValue(new Promise(() => {}));

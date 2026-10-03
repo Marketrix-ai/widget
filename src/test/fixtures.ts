@@ -1,7 +1,7 @@
 /**
  * Shared test fixtures for widget tests. `getMockWidgetConfig`/`validSettings`/`credentialedConfig` build a complete,
  * schema-valid tenant config (preview and resolved-production shapes); `agentMessage` builds an agent `ChatMessage` and
- * `ofKind` narrows one; `toolCall` builds a `tool/call` event (a click by default); `mockMediaStream`/`liveMediaStream`
+ * `ofKind` narrows one; `freshCopyOf` proves a cache-busted re-import exports what the real module does; `toolCall` builds a `tool/call` event (a click by default); `mockMediaStream`/`liveMediaStream`
  * stub the browser's un-mockable `MediaStream`, `stubRect` gives every element a layout jsdom lacks, `$` finds an
  * element by tag or selector or throws; `asStreamClientInternals` reaches `streamClient`'s private state and handlers
  * for simulating SSE events, stream failures and reconnects.
@@ -45,6 +45,16 @@ export function ofKind<K extends ChatMessage['kind']>(
 ): Extract<ChatMessage, { kind: K }> {
   if (!message || !isKind(message, kind)) throw new Error(`expected a ${kind} message, got ${message?.kind}`);
   return message;
+}
+
+const hasExportsOf = <T extends object>(fresh: unknown, real: T): fresh is T =>
+  typeof fresh === 'object' &&
+  fresh !== null &&
+  Object.keys(real).every(name => typeof Reflect.get(fresh, name) === typeof Reflect.get(real, name));
+
+export function freshCopyOf<T extends object>(fresh: unknown, real: T): T {
+  if (!hasExportsOf(fresh, real)) throw new Error('the re-imported module does not export what the real one does');
+  return fresh;
 }
 
 export const flushMicrotasks = (): Promise<void> => Promise.resolve();

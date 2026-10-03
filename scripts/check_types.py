@@ -5,7 +5,7 @@ unannotatable); `Any` and `JsonValue` appear nowhere, type aliases included; no 
 container left unparameterised, and no subscript carries `object`. A bare `object` parameter is the one exception,
 Python's counterpart of TypeScript's `unknown` parameter: input still to be parsed, which the checker forces the
 function to narrow before use. A `json`/`yaml` load returns `Any`, so its result may only go straight into a pydantic
-`model_validate`/`validate_python`. `cast()` and type-checker ignore comments are refused, because each silences the
+`model_validate`/`validate_python`, or into a function in the same file whose parameter there is a bare `object`. `cast()` and type-checker ignore comments are refused, because each silences the
 checker instead of naming the type. Each issue prints as one tab-separated
 `file, line, message` row.
 """
@@ -43,6 +43,14 @@ def check_file(root: Path, path: Path) -> list[tuple[str, int, str]]:
     issues = [(name, text.count("\n", 0, match.start()) + 1, "type-checker ignore comment") for match in IGNORE_COMMENT.finditer(text)]
     tree = ast.parse(text)
     parents = {id(child): parent for parent in ast.walk(tree) for child in ast.iter_child_nodes(parent)}
+    parsers = {
+        definition.name: [
+            isinstance(argument.annotation, ast.Name) and argument.annotation.id == "object"
+            for argument in [*definition.args.posonlyargs, *definition.args.args]
+        ]
+        for definition in ast.walk(tree)
+        if isinstance(definition, (ast.FunctionDef, ast.AsyncFunctionDef))
+    }
     for node in ast.walk(tree):
         if (isinstance(node, ast.Name) and node.id in ("Any", "JsonValue")) or (isinstance(node, ast.Attribute) and node.attr in ("Any", "JsonValue")):
             issues.append((name, node.lineno, f"`{node.id if isinstance(node, ast.Name) else node.attr}` used as a type"))
@@ -57,11 +65,10 @@ def check_file(root: Path, path: Path) -> list[tuple[str, int, str]]:
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name):
             loader = (node.func.value.id, node.func.attr)
             parent = parents.get(id(node))
-            validated = (
-                isinstance(parent, ast.Call)
-                and isinstance(parent.func, ast.Attribute)
-                and parent.func.attr in VALIDATORS
-                and node in parent.args
+            position = parent.args.index(node) if isinstance(parent, ast.Call) and node in parent.args else -1
+            validated = position >= 0 and isinstance(parent, ast.Call) and (
+                (isinstance(parent.func, ast.Attribute) and parent.func.attr in VALIDATORS)
+                or (isinstance(parent.func, ast.Name) and position < len(parsers.get(parent.func.id, [])) and parsers[parent.func.id][position])
             )
             if loader in UNTYPED_LOADERS and not validated:
                 issues.append((name, node.lineno, f"`{'.'.join(loader)}()` result is untyped; validate it with a model"))

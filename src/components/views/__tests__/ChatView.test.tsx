@@ -181,26 +181,26 @@ describe('a mode the tenant disabled', () => {
     vi.spyOn(chatThread, 'getOrCreateChatId').mockResolvedValue('chat-1');
     vi.spyOn(streamClient, 'connect').mockResolvedValue();
     vi.spyOn(streamClient, 'ready').mockResolvedValue();
-    vi.spyOn(streamClient, 'send').mockResolvedValue();
+    const posted = vi.spyOn(streamClient, 'send').mockResolvedValue();
     scopeStorageTo({ mtxId });
     renderWidget({ mtxId, use_screenshare: false, ...overrides }, { previewMode: false });
     await waitFor(() => expect(streamClient.connect).toHaveBeenCalled());
     openWidget();
     openChatTab();
-    return getComposer();
+    return { composer: getComposer(), postedTypes: () => posted.mock.calls.map(([command]) => command.type) };
   };
 
   it('is never sent: the composer falls back to the first enabled mode', async () => {
-    const composer = await liveChat('chatview-mode-1', { widget_feature_tell: false });
+    const { composer, postedTypes } = await liveChat('chatview-mode-1', { widget_feature_tell: false });
 
     send(composer, 'walk me through it');
 
-    await waitFor(() => expect(streamClient.send).toHaveBeenCalledWith(expect.objectContaining({ type: 'chat/show' })));
-    expect(streamClient.send).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'chat/tell' }));
+    await waitFor(() => expect(postedTypes()).toContain('chat/show'));
+    expect(postedTypes()).not.toContain('chat/tell');
   });
 
   it('locks the composer when the tenant enabled no mode at all', async () => {
-    const composer = await liveChat('chatview-mode-2', {
+    const { composer } = await liveChat('chatview-mode-2', {
       widget_feature_tell: false,
       widget_feature_show: false,
       widget_feature_do: false,
@@ -221,14 +221,14 @@ describe('clearing the chat', () => {
     vi.spyOn(chatThread, 'getOrCreateChatId').mockImplementation(() => Promise.resolve(chatIds[0] ?? 'none'));
     vi.spyOn(streamClient, 'connect').mockResolvedValue();
     vi.spyOn(streamClient, 'ready').mockResolvedValue();
-    vi.spyOn(streamClient, 'send').mockResolvedValue();
+    const posted = vi.spyOn(streamClient, 'send').mockResolvedValue();
     scopeStorageTo({ mtxId: 'chatview-clear-1' });
     renderWidget({ mtxId: 'chatview-clear-1' }, { previewMode: false });
     await waitFor(() => expect(streamClient.connect).toHaveBeenCalledWith('chat-1'));
     openWidget();
     openChatTab();
     send(getComposer(), 'hello?');
-    await waitFor(() => expect(streamClient.send).toHaveBeenCalledWith(expect.objectContaining({ type: 'chat/tell' })));
+    await waitFor(() => expect(posted.mock.calls.map(([command]) => command.type)).toContain('chat/tell'));
 
     chatIds.shift();
     fireEvent.click(screen.getByText('Clear chat'));

@@ -10,10 +10,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import { z } from 'zod';
 
-import { agentMessage, credentialedConfig, FakeMediaStream } from '../../test/fixtures';
+import { agentMessage, credentialedConfig, FakeMediaStream, freshCopyOf } from '../../test/fixtures';
 import type { AgentMessage, ChatMessage } from '../../types';
 import { createScreenshareMessage } from '../../utils/chat';
-import type * as StorageModule from '../StorageService';
+import * as StorageModule from '../StorageService';
 import {
   getChatId,
   readChatSnapshot,
@@ -26,7 +26,8 @@ import {
 } from '../StorageService';
 
 let freshImports = 0;
-const freshStorage = (): Promise<typeof StorageModule> => import(`../StorageService.ts?t=${freshImports++}`);
+const freshStorage = async (): Promise<typeof StorageModule> =>
+  freshCopyOf(await import(`../StorageService.ts?t=${freshImports++}`), StorageModule);
 
 describe('scopedKey', () => {
   it('keeps the three tenant-scoped browser-local keys byte-identical', () => {

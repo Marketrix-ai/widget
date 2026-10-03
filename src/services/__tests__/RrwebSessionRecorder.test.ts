@@ -230,7 +230,7 @@ describe('a session open the api rejects', () => {
 
     await recorder.start();
     expect(record).not.toHaveBeenCalled();
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('503'));
+    expect(warn.mock.calls.flat().join(' ')).toContain('503');
 
     await waitFor(() => expect(record).toHaveBeenCalledTimes(1));
     expect(widgetMessagePost).toHaveBeenCalledTimes(2);

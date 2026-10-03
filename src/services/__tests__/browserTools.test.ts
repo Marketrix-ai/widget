@@ -260,7 +260,7 @@ describe("show mode's default explanation only fills in a blank one", () => {
 
     await executeTool('click_element', { index: 0 }, 'show', 'Click the Buy button');
 
-    expect(staged).toHaveBeenCalledWith(expect.objectContaining({ explanation: 'Click the Buy button' }));
+    expect(staged.mock.calls[0]?.[0].explanation).toBe('Click the Buy button');
   });
 
   it('falls back to the tool label when the caller leaves the explanation blank', async () => {
@@ -268,7 +268,7 @@ describe("show mode's default explanation only fills in a blank one", () => {
 
     await executeTool('click_element', { index: 0 }, 'show');
 
-    expect(staged).toHaveBeenCalledWith(expect.objectContaining({ explanation: 'Clicking element' }));
+    expect(staged.mock.calls[0]?.[0].explanation).toBe('Clicking element');
   });
 });
 
