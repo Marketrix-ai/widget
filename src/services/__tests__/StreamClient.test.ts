@@ -6,22 +6,29 @@
  * the stream up, and that an evicted tab re-mints its id.
  */
 
-import { getSdk, type WidgetClient, type WidgetEvent } from '../../sdk';
+import { AsyncIteratorClass } from '@orpc/client';
+
+import type { WidgetClient, WidgetEvent } from '../../sdk';
 import { asStreamClientInternals, flushMicrotasks } from '../../test/fixtures';
-import { advanceTimersByTimeAsync, mocked, mockSdkModule, restoreModuleAfterAll, waitFor } from '../../test/vi-compat';
+import { advanceTimersByTimeAsync, mockSdk, waitFor } from '../../test/vi-compat';
 import { streamClient, StreamGaveUpError } from '../StreamClient';
 
 type StreamClient = typeof streamClient;
 
-vi.mock('../../sdk', () => mockSdkModule({ widgetStream: vi.fn(), widgetMessagePost: vi.fn() }));
-restoreModuleAfterAll('../../sdk', () => import('../../sdk/index.ts?real'));
-
-const mockSdk = mocked(getSdk());
+const widgetStream = vi.fn<WidgetClient['widgetStream']>();
+const widgetMessagePost = vi.fn<WidgetClient['widgetMessagePost']>();
+mockSdk({ widgetStream, widgetMessagePost });
 
 type MockedStream = Awaited<ReturnType<WidgetClient['widgetStream']>>;
 
 function asMockedStream(iterable: AsyncIterable<WidgetEvent>): MockedStream {
-  return iterable as unknown as MockedStream;
+  const iterator = iterable[Symbol.asyncIterator]();
+  return new AsyncIteratorClass(
+    () => iterator.next(),
+    async () => {
+      await iterator.return?.();
+    },
+  );
 }
 
 function emptyStream(): MockedStream {
@@ -110,7 +117,7 @@ function controlledStream(): ControlledStream {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockSdk.widgetStream.mockResolvedValue(emptyStream());
+  widgetStream.mockResolvedValue(emptyStream());
 });
 
 afterEach(() => {
@@ -199,13 +206,13 @@ describe('StreamClient guard conditions', () => {
   it('reconnectNow is a no-op once already registered, rather than redialing regardless of canReconnect', () => {
     const { client } = freshChatClient('registered');
     client.reconnectNow();
-    expect(mockSdk.widgetStream).not.toHaveBeenCalled();
+    expect(widgetStream).not.toHaveBeenCalled();
   });
 
   it('connect no-ops for a chat id already connecting, open or registered, rather than redialing it', async () => {
     const { client } = freshChatClient('open');
     await client.connect('chat-1');
-    expect(mockSdk.widgetStream).not.toHaveBeenCalled();
+    expect(widgetStream).not.toHaveBeenCalled();
     client.disconnect();
   });
 
@@ -224,15 +231,15 @@ describe('StreamClient guard conditions', () => {
   it('does not resume a scheduled reconnect once torn down before the timer fires', async () => {
     vi.useFakeTimers();
     const client = freshClient();
-    mockSdk.widgetStream.mockRejectedValueOnce(new Error('down'));
+    widgetStream.mockRejectedValueOnce(new Error('down'));
     await client.connect('chat-1');
-    expect(mockSdk.widgetStream).toHaveBeenCalledTimes(1);
+    expect(widgetStream).toHaveBeenCalledTimes(1);
 
     asStreamClientInternals().tornDown = true;
-    mockSdk.widgetStream.mockResolvedValue(emptyStream());
+    widgetStream.mockResolvedValue(emptyStream());
     await advanceTimersByTimeAsync(1000);
 
-    expect(mockSdk.widgetStream).toHaveBeenCalledTimes(1);
+    expect(widgetStream).toHaveBeenCalledTimes(1);
     asStreamClientInternals().tornDown = false;
     client.disconnect();
     vi.useRealTimers();
@@ -243,15 +250,15 @@ describe('StreamClient retry affordance', () => {
   it('reconnectNow reopens the stream immediately, without waiting out the backoff', async () => {
     vi.useFakeTimers();
     const client = freshClient();
-    mockSdk.widgetStream.mockRejectedValueOnce(new Error('network down'));
+    widgetStream.mockRejectedValueOnce(new Error('network down'));
     await client.connect('chat-1');
 
-    expect(mockSdk.widgetStream).toHaveBeenCalledTimes(1);
+    expect(widgetStream).toHaveBeenCalledTimes(1);
     expect(client.canReconnect()).toBe(true);
 
-    mockSdk.widgetStream.mockResolvedValue(emptyStream());
+    widgetStream.mockResolvedValue(emptyStream());
     client.reconnectNow();
-    expect(mockSdk.widgetStream).toHaveBeenCalledTimes(2);
+    expect(widgetStream).toHaveBeenCalledTimes(2);
 
     client.disconnect();
     vi.useRealTimers();
@@ -259,15 +266,15 @@ describe('StreamClient retry affordance', () => {
 
   it('reconnectNow redials a stream stuck mid-dial, which canReconnect already offers Retry for', () => {
     const client = freshClient();
-    mockSdk.widgetStream.mockReturnValue(new Promise(() => {}));
+    widgetStream.mockReturnValue(new Promise(() => {}));
     void client.connect('chat-3');
 
-    expect(mockSdk.widgetStream).toHaveBeenCalledTimes(1);
+    expect(widgetStream).toHaveBeenCalledTimes(1);
     expect(client.canReconnect()).toBe(true);
 
     client.reconnectNow();
 
-    expect(mockSdk.widgetStream).toHaveBeenCalledTimes(2);
+    expect(widgetStream).toHaveBeenCalledTimes(2);
     client.disconnect();
   });
 
@@ -276,10 +283,10 @@ describe('StreamClient retry affordance', () => {
     const errors: string[] = [];
     const callbacks = { onMessage: () => {}, onError: (e: Error) => errors.push(e.message) };
     client.addCallbacks(callbacks);
-    mockSdk.widgetStream.mockResolvedValue(
+    widgetStream.mockResolvedValue(
       asMockedStream({
         async *[Symbol.asyncIterator]() {
-          yield { type: 'chat/error', request_id: 'auth', error: 'Authentication failed' } as WidgetEvent;
+          yield { type: 'chat/error', request_id: 'auth', error: 'Authentication failed' };
         },
       }),
     );
@@ -298,27 +305,27 @@ describe('StreamClient.send', () => {
   it('rejects immediately with no active chat, rather than sending without one', async () => {
     const client = freshClient();
     await expect(client.send({ type: 'chat/stop' })).rejects.toThrow('No active chat');
-    expect(mockSdk.widgetMessagePost).not.toHaveBeenCalled();
+    expect(widgetMessagePost).not.toHaveBeenCalled();
   });
 
   it('posts with the same chat id and tab id the stream connected with, so the api can key both to one tab', async () => {
-    mockSdk.widgetMessagePost.mockResolvedValueOnce({ success: true });
+    widgetMessagePost.mockResolvedValueOnce({ success: true });
     const client = freshClient();
     await client.connect('chat-1');
 
     await client.send({ type: 'chat/stop' });
 
-    const streamCall = mockSdk.widgetStream.mock.calls[0]?.[0] as { tab_id: string };
-    const sendCall = mockSdk.widgetMessagePost.mock.calls[0]?.[0] as { chat_id: string; tab_id: string };
-    expect(sendCall.chat_id).toBe('chat-1');
-    expect(sendCall.tab_id).toBe(streamCall.tab_id);
+    const streamCall = widgetStream.mock.calls[0]?.[0];
+    const sendCall = widgetMessagePost.mock.calls[0]?.[0];
+    expect(sendCall?.chat_id).toBe('chat-1');
+    expect(sendCall?.tab_id).toBe(streamCall?.tab_id);
     client.disconnect();
   });
 
   it('rethrows the sdk rejection rather than swallowing it after logging', async () => {
     const client = freshClient();
     await client.connect('chat-1');
-    mockSdk.widgetMessagePost.mockRejectedValueOnce(new Error('offline'));
+    widgetMessagePost.mockRejectedValueOnce(new Error('offline'));
 
     await expect(client.send({ type: 'chat/stop' })).rejects.toThrow('offline');
     client.disconnect();
@@ -329,7 +336,7 @@ describe('StreamClient fault injection', () => {
   it('drops events from a connection reconnectNow already superseded, never duplicating a rendered turn', async () => {
     const client = freshClient();
     const first = controlledStream();
-    mockSdk.widgetStream.mockResolvedValueOnce(first.stream);
+    widgetStream.mockResolvedValueOnce(first.stream);
     await client.connect('chat-1');
     await flushMicrotasks();
 
@@ -338,7 +345,7 @@ describe('StreamClient fault injection', () => {
     client.addCallbacks(callbacks);
 
     const second = controlledStream();
-    mockSdk.widgetStream.mockResolvedValueOnce(second.stream);
+    widgetStream.mockResolvedValueOnce(second.stream);
     expect(client.canReconnect()).toBe(true);
     client.reconnectNow();
     await flushMicrotasks();
@@ -362,29 +369,29 @@ describe('StreamClient fault injection', () => {
     const client = freshClient();
     const baseDelays = [1000, 2000, 4000, 8000, 16000, 30000, 30000, 30000, 30000, 30000];
 
-    mockSdk.widgetStream.mockRejectedValue(new Error('down'));
+    widgetStream.mockRejectedValue(new Error('down'));
     await client.connect('chat-1');
-    expect(mockSdk.widgetStream).toHaveBeenCalledTimes(1);
+    expect(widgetStream).toHaveBeenCalledTimes(1);
 
     const errors: Error[] = [];
     client.addCallbacks({ onMessage: () => {}, onError: e => errors.push(e) });
 
     for (const [i, base] of baseDelays.entries()) {
       await advanceTimersByTimeAsync(base / 2 - 1);
-      expect(mockSdk.widgetStream).toHaveBeenCalledTimes(i + 1);
+      expect(widgetStream).toHaveBeenCalledTimes(i + 1);
       await advanceTimersByTimeAsync(base / 2 + 1);
       await Promise.resolve();
       await Promise.resolve();
       await Promise.resolve();
-      expect(mockSdk.widgetStream).toHaveBeenCalledTimes(i + 2);
+      expect(widgetStream).toHaveBeenCalledTimes(i + 2);
     }
 
     await advanceTimersByTimeAsync(30000);
-    expect(mockSdk.widgetStream).toHaveBeenCalledTimes(baseDelays.length + 1);
+    expect(widgetStream).toHaveBeenCalledTimes(baseDelays.length + 1);
     expect(errors.some(e => e instanceof StreamGaveUpError)).toBe(true);
 
     await advanceTimersByTimeAsync(120000);
-    expect(mockSdk.widgetStream).toHaveBeenCalledTimes(baseDelays.length + 1);
+    expect(widgetStream).toHaveBeenCalledTimes(baseDelays.length + 1);
 
     client.disconnect();
     vi.useRealTimers();
@@ -394,19 +401,18 @@ describe('StreamClient fault injection', () => {
     vi.useFakeTimers();
     const client = freshClient();
     const evicted = controlledStream();
-    mockSdk.widgetStream.mockResolvedValueOnce(evicted.stream);
+    widgetStream.mockResolvedValueOnce(evicted.stream);
     await client.connect('chat-1');
     evicted.push({ type: 'registered', chat_id: 'chat-1' });
-    await flushMicrotasks();
+    await waitFor(() => expect(asStreamClientInternals().status).toBe('registered'));
 
     const redial = controlledStream();
-    mockSdk.widgetStream.mockResolvedValueOnce(redial.stream);
+    widgetStream.mockResolvedValueOnce(redial.stream);
     evicted.end();
-    await flushMicrotasks();
-    await advanceTimersByTimeAsync(1000);
+    await waitFor(() => expect(widgetStream).toHaveBeenCalledTimes(2), 2000);
 
-    const [first, second] = mockSdk.widgetStream.mock.calls.map(([input]) => input.tab_id);
-    expect(mockSdk.widgetStream).toHaveBeenCalledTimes(2);
+    const [first, second] = widgetStream.mock.calls.map(([input]) => input.tab_id);
+    expect(widgetStream).toHaveBeenCalledTimes(2);
     expect(second).not.toBe(first);
 
     client.disconnect();
@@ -416,7 +422,7 @@ describe('StreamClient fault injection', () => {
   it('keeps the stream when a subscriber throws, rather than redialing as if the transport failed', async () => {
     const client = freshClient();
     const stream = controlledStream();
-    mockSdk.widgetStream.mockResolvedValueOnce(stream.stream);
+    widgetStream.mockResolvedValueOnce(stream.stream);
     await client.connect('chat-1');
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     const received: WidgetEvent[] = [];
@@ -435,7 +441,7 @@ describe('StreamClient fault injection', () => {
     await waitFor(() => expect(received).toHaveLength(2));
 
     expect(asStreamClientInternals().status).toBe('registered');
-    expect(mockSdk.widgetStream).toHaveBeenCalledTimes(1);
+    expect(widgetStream).toHaveBeenCalledTimes(1);
     expect(consoleError).toHaveBeenCalledTimes(2);
 
     consoleError.mockRestore();
@@ -448,16 +454,15 @@ describe('StreamClient fault injection', () => {
     vi.useFakeTimers();
     const client = freshClient();
     const stream = controlledStream();
-    mockSdk.widgetStream.mockResolvedValueOnce(stream.stream);
+    widgetStream.mockResolvedValueOnce(stream.stream);
     await client.connect('chat-1');
-    expect(mockSdk.widgetStream).toHaveBeenCalledTimes(1);
+    expect(widgetStream).toHaveBeenCalledTimes(1);
 
     stream.push({ type: 'chat/error', request_id: 'auth', error: 'unauthorized' });
-    await Promise.resolve();
 
-    expect(client.canReconnect()).toBe(false);
+    await waitFor(() => expect(client.canReconnect()).toBe(false));
     await advanceTimersByTimeAsync(10 * 30000);
-    expect(mockSdk.widgetStream).toHaveBeenCalledTimes(1);
+    expect(widgetStream).toHaveBeenCalledTimes(1);
 
     client.disconnect();
     vi.useRealTimers();

@@ -42,7 +42,9 @@ describe('ScreenAccessDialog', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'No' })).toHaveFocus());
 
     fireEvent.keyDown(document, { key: 'Escape' });
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
     await waitFor(() => expect(trigger).toHaveFocus());
   });
 

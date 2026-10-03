@@ -12,7 +12,7 @@ import * as chatThread from '../../../services/chatThread';
 import * as ScreenShareService from '../../../services/ScreenShareService';
 import { scopeStorageTo } from '../../../services/StorageService';
 import { streamClient } from '../../../services/StreamClient';
-import { liveMediaStream, ofKind } from '../../../test/fixtures';
+import { FakeMediaStream, ofKind } from '../../../test/fixtures';
 import { getComposer, openChatTab, openWidget, renderChatHarness, renderWidget } from '../../../test/renderWidget';
 import { messageText } from '../../../utils/chat';
 
@@ -100,7 +100,7 @@ describe('a send while the stream is down', () => {
     send(composer, 'first attempt');
     fireEvent.change(composer, { target: { value: 'already typing something new' } });
 
-    await act(() => new Promise(resolve => setTimeout(resolve, 0)));
+    await act(() => new Promise<void>(resolve => setTimeout(resolve, 0)));
 
     expect(composer.value).toBe('already typing something new');
   });
@@ -132,7 +132,7 @@ describe('answering a screen-access request', () => {
 
   it('allow: starts the share, announces it, resolves the card and releases the held turn', async () => {
     Object.defineProperty(navigator, 'mediaDevices', {
-      value: { getDisplayMedia: vi.fn().mockResolvedValue(liveMediaStream()) },
+      value: { getDisplayMedia: vi.fn().mockResolvedValue(new FakeMediaStream()) },
       configurable: true,
     });
     const chat = await requestAccess();
@@ -158,7 +158,7 @@ describe('answering a screen-access request', () => {
 
   it('a share ending announces it and drops the live video bubble', async () => {
     Object.defineProperty(navigator, 'mediaDevices', {
-      value: { getDisplayMedia: vi.fn().mockResolvedValue(liveMediaStream()) },
+      value: { getDisplayMedia: vi.fn().mockResolvedValue(new FakeMediaStream()) },
       configurable: true,
     });
     const chat = await requestAccess();
@@ -251,7 +251,7 @@ describe('following the conversation', () => {
     const composer = openChat();
 
     send(composer, 'a new message');
-    await act(() => new Promise(resolve => window.requestAnimationFrame(() => resolve(undefined))));
+    await act(() => new Promise<void>(resolve => window.requestAnimationFrame(() => resolve())));
 
     expect(scrollIntoView).not.toHaveBeenCalled();
     expect(screen.getByRole('log').scrollTop).toBe(screen.getByRole('log').scrollHeight);

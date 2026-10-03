@@ -24,11 +24,12 @@
     "tag": "bash \"${MARKETRIX_HOME:-$HOME/code/marketrix}/infra/scripts/release.sh\"",
     "start": "vite",
     "build": "vite build",
-    "ci": "bun run code:check && bun run check:comments && bun run build && bun run test && bun run bundle:check && bun run check:served",
+    "ci": "bun run code:check && bun run check:comments && bun run check:types && bun run build && bun run test && bun run bundle:check && bun run check:served",
     "test": "bun test --isolate",
     "bundle:check": "bun scripts/bundle-check.ts",
     "check:served": "bun run scripts/checkServed.ts",
     "check:comments": "bun scripts/check-comments.ts",
+    "check:types": "bun scripts/check-types.ts",
     "code:fix": "eslint . --fix && prettier --write .",
     "code:check": "tsc --noEmit && eslint . --max-warnings 0 && prettier --check ."
   },

@@ -1,21 +1,14 @@
 /**
- * The one home for `vitest`-compat `vi.*` helpers bun's own `vi` shim doesn't implement: the `mocked` type
- * shim, `advanceTimersByTimeAsync`/`waitFor` for fake-timer-aware polling,
- * `restoreModuleAfterAll` to un-mock a module after a suite (the fallback for when `vi.spyOn` can't patch
- * a mocked namespace, e.g. an oRPC client `Proxy` whose own property-assignment traps ignore it), and
- * `mockSdkModule` to type-check an `sdk` mock against the real client.
+ * The one home for `vitest`-compat `vi.*` helpers bun's own `vi` shim doesn't implement:
+ * `advanceTimersByTimeAsync`/`waitFor` for fake-timer-aware polling, and `mockSdk`, which swaps the `sdk` module's
+ * client for typed procedure mocks and restores the real module after the suite (the fallback for when `vi.spyOn`
+ * can't patch a mocked namespace, e.g. an oRPC client `Proxy` whose own property-assignment traps ignore it).
  */
-import { afterAll, type Mock, vi } from 'bun:test';
+import { afterAll, vi } from 'bun:test';
 
-import type { WidgetClient } from '../sdk';
+import * as sdk from '../sdk';
 
-type Mocked<T> = T extends (...args: infer A) => infer R
-  ? Mock<(...args: A) => R>
-  : { [K in keyof T]: T[K] extends (...args: infer A) => infer R ? Mock<(...args: A) => R> : T[K] };
-
-export function mocked<T>(item: T): Mocked<T> {
-  return item as Mocked<T>;
-}
+const REAL_SDK = { ...sdk };
 
 export async function advanceTimersByTimeAsync(ms: number): Promise<void> {
   vi.advanceTimersByTime(ms);
@@ -35,13 +28,7 @@ export async function waitFor<T>(check: () => T, timeout = 1000): Promise<T> {
   }
 }
 
-export function restoreModuleAfterAll(specifier: string, importReal: () => Promise<Record<string, unknown>>): void {
-  afterAll(async () => {
-    const real = await importReal();
-    vi.mock(specifier, () => real);
-  });
-}
-
-export function mockSdkModule(procedures: Partial<WidgetClient>): { getSdk: () => Partial<WidgetClient> } {
-  return { getSdk: () => procedures };
+export function mockSdk(procedures: Partial<sdk.WidgetClient>): void {
+  vi.mock('../sdk', () => ({ ...REAL_SDK, getSdk: () => procedures }));
+  afterAll(() => vi.mock('../sdk', () => REAL_SDK));
 }

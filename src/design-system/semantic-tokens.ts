@@ -3,8 +3,6 @@
  * mechanism: `themeCssProperties` plus the fixed `WIDGET_RADIUS_PX`. The focus ring is black or white against
  * the background rather than the accent, which has no guaranteed contrast.
  */
-import type { CSSProperties } from 'react';
-
 import { DEFAULT_WIDGET_SETTINGS } from '../sdk/contracts/widgetSettings';
 import type { WidgetSettingsData } from '../types';
 import { addOpacity, getContrastingColor } from '../utils/color';
@@ -21,7 +19,7 @@ type WidgetColorSettings = Pick<
   | 'widget_secondary_color'
 >;
 
-export function themeCssProperties(settings: WidgetColorSettings): CSSProperties & Record<`--${string}`, string> {
+export function themeCssProperties(settings: WidgetColorSettings): Record<`--${string}`, string> {
   const { widget_background_color: background, widget_text_color: text, widget_accent_color: accent } = settings;
   const secondary = settings.widget_secondary_color;
   return {

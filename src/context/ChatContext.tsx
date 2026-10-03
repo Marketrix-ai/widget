@@ -66,7 +66,7 @@ interface ChatContextType {
   chatActions: ChatActions;
 }
 
-const ChatContext = createContext<ChatContextType | undefined>(undefined);
+const ChatContext = createContext<ChatContextType | null>(null);
 
 const STALE_REPLY_TIMEOUT_MS = 120_000;
 const STALE_REPLY_TEXT = 'This is taking longer than expected. Please try again.';
@@ -267,7 +267,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     showModeService.cleanup();
     commit(s => reduceStop(s, currentModeRef.current));
     if (isPreviewMode) return;
-    streamClient.send({ type: 'chat/stop' }).catch(err => {
+    streamClient.send({ type: 'chat/stop' }).catch((err: unknown) => {
       console.error('[Widget] Failed to stop task remotely:', err);
       uiActions.setError('Could not stop the assistant — it may still be working.');
     });

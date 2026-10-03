@@ -195,7 +195,7 @@ function showHostPageNotice(message: string, tone: NotificationTone, styleNonce:
 
   const { mountEl } = attachShadowMount(noticeContainer, 'marketrix-widget-notice-root', styleNonce);
   for (const [name, value] of Object.entries(themeCssProperties(DEFAULT_WIDGET_SETTINGS))) {
-    mountEl.style.setProperty(name, String(value));
+    mountEl.style.setProperty(name, value);
   }
 
   noticeRoot = createRoot(mountEl);
@@ -240,5 +240,5 @@ export const autoInitializeWidget = (): void => {
   if (script.getAttribute('mtx-use-screenshare') === 'false') config.use_screenshare = false;
   if (styleNonce) config.styleNonce = styleNonce;
 
-  initWidget(config).catch(error => console.error('[AutoInit] Failed to initialize widget:', error));
+  initWidget(config).catch((error: unknown) => console.error('[AutoInit] Failed to initialize widget:', error));
 };

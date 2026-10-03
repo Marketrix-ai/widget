@@ -34,12 +34,17 @@ export function toolCall(
   };
 }
 
+const isKind = <K extends ChatMessage['kind']>(
+  message: ChatMessage,
+  kind: K,
+): message is Extract<ChatMessage, { kind: K }> => message.kind === kind;
+
 export function ofKind<K extends ChatMessage['kind']>(
   message: ChatMessage | undefined,
   kind: K,
 ): Extract<ChatMessage, { kind: K }> {
-  if (message?.kind !== kind) throw new Error(`expected a ${kind} message, got ${message?.kind}`);
-  return message as Extract<ChatMessage, { kind: K }>;
+  if (!message || !isKind(message, kind)) throw new Error(`expected a ${kind} message, got ${message?.kind}`);
+  return message;
 }
 
 export const flushMicrotasks = (): Promise<void> => Promise.resolve();
@@ -115,23 +120,62 @@ export function credentialedConfig(overrides: Partial<CredentialedConfig> = {}):
   };
 }
 
-export function mockMediaStream(overrides: Record<string, unknown> = {}): MediaStream {
-  return {
-    active: true,
-    getVideoTracks: () => [],
-    getTracks: () => [],
-    ...overrides,
-  } as unknown as MediaStream;
+export class FakeTrack extends EventTarget implements MediaStreamTrack {
+  contentHint = '';
+  enabled = true;
+  id = 'track-1';
+  kind = 'video';
+  label = 'screen';
+  muted = false;
+  onended = null;
+  onmute = null;
+  onunmute = null;
+  readyState: MediaStreamTrackState = 'live';
+  stop = vi.fn();
+  applyConstraints = async (): Promise<void> => {};
+  clone = (): FakeTrack => new FakeTrack();
+  getCapabilities = (): MediaTrackCapabilities => ({});
+  getConstraints = (): MediaTrackConstraints => ({});
+  getSettings = (): MediaTrackSettings => ({});
+
+  end(): void {
+    this.readyState = 'ended';
+    this.dispatchEvent(new Event('ended'));
+  }
 }
 
-export const liveMediaStream = (): MediaStream =>
-  mockMediaStream({
-    getVideoTracks: () => [{ readyState: 'live', addEventListener: vi.fn() }],
-    getTracks: () => [{ stop: vi.fn() }],
-  });
+export class FakeMediaStream extends EventTarget implements MediaStream {
+  active = true;
+  id = 'stream-1';
+  onaddtrack = null;
+  onremovetrack = null;
+
+  constructor(readonly tracks: FakeTrack[] = [new FakeTrack()]) {
+    super();
+  }
+
+  getTracks = (): FakeTrack[] => this.tracks;
+  getVideoTracks = (): FakeTrack[] => this.tracks.filter(track => track.kind === 'video');
+  getAudioTracks = (): FakeTrack[] => this.tracks.filter(track => track.kind === 'audio');
+  getTrackById = (id: string): FakeTrack | null => this.tracks.find(track => track.id === id) ?? null;
+  addTrack = (track: FakeTrack): void => void this.tracks.push(track);
+  removeTrack = (track: FakeTrack): void => void this.tracks.splice(this.tracks.indexOf(track), 1);
+  clone = (): FakeMediaStream => new FakeMediaStream([...this.tracks]);
+}
 
 export function stubRect(rect: Partial<DOMRect> = { top: 0, left: 0, width: 10, height: 10 }): void {
-  Element.prototype.getBoundingClientRect = () => rect as DOMRect;
+  const { top = 0, left = 0, width = 0, height = 0, right = left + width, bottom = top + height } = rect;
+  Element.prototype.getBoundingClientRect = () => ({
+    top,
+    left,
+    width,
+    height,
+    right,
+    bottom,
+    x: left,
+    y: top,
+    toJSON: () => rect,
+  });
 }
 
 type Found<S extends string> = S extends keyof HTMLElementTagNameMap ? HTMLElementTagNameMap[S] : HTMLElement;
@@ -157,4 +201,40 @@ interface StreamClientTestHandle {
   giveUp: (message: string) => void;
 }
 
-export const asStreamClientInternals = (): StreamClientTestHandle => streamClient as unknown as StreamClientTestHandle;
+export const asStreamClientInternals = (): StreamClientTestHandle => ({
+  get chatId() {
+    return streamClient['chatId'];
+  },
+  set chatId(value) {
+    streamClient['chatId'] = value;
+  },
+  get status() {
+    return streamClient['status'];
+  },
+  set status(value) {
+    streamClient['status'] = value;
+  },
+  get tornDown() {
+    return streamClient['tornDown'];
+  },
+  set tornDown(value) {
+    streamClient['tornDown'] = value;
+  },
+  get credentialRejected() {
+    return streamClient['credentialRejected'];
+  },
+  set credentialRejected(value) {
+    streamClient['credentialRejected'] = value;
+  },
+  get reconnectAttempts() {
+    return streamClient['reconnectAttempts'];
+  },
+  set reconnectAttempts(value) {
+    streamClient['reconnectAttempts'] = value;
+  },
+  scheduleReconnect: () => streamClient['scheduleReconnect'](),
+  handleMessage: event => streamClient['handleMessage'](event),
+  isConnected: () => streamClient['isConnected'](),
+  notifyError: error => streamClient['notifyError'](error),
+  giveUp: message => streamClient['giveUp'](message),
+});

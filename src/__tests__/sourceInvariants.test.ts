@@ -8,6 +8,8 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'bun:test';
 
+import pkg from '../../package.json';
+import tsconfig from '../../tsconfig.build.json';
 import { REACT_EXTERNALS } from '../../vite.config';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -16,8 +18,6 @@ const src = resolve(here, '..');
 const read = (p: string): string => readFileSync(resolve(root, p), 'utf8');
 
 describe('package.json', () => {
-  const pkg = JSON.parse(read('package.json'));
-
   it('publishes exactly the dist allowlist, with no .npmignore to complicate it', () => {
     expect(pkg.files).toEqual(['dist', '!dist/**/*.map', '!dist/module-sizes.json']);
     expect(() => read('.npmignore')).toThrow();
@@ -29,11 +29,9 @@ describe('package.json', () => {
 });
 
 describe('tsconfig.build.json', () => {
-  const tsconfig = JSON.parse(read('tsconfig.build.json'));
-
   it('excludes src/test and test files from the published declarations', () => {
     expect(tsconfig.exclude).toContain('src/test');
-    expect(tsconfig.exclude.some((p: string) => p.includes('*.test.'))).toBe(true);
+    expect(tsconfig.exclude.some(p => p.includes('*.test.'))).toBe(true);
   });
 });
 

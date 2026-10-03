@@ -18,7 +18,7 @@ const requiredFiles = [
   { path: 'dist/loader.js', maxBytes: 2_000 },
 ];
 
-const errors = [];
+const errors: string[] = [];
 
 for (const { path, maxBytes } of requiredFiles) {
   const { size } = statSync(path);

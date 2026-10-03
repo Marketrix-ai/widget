@@ -47,7 +47,8 @@ export function simulateKeyAction(element: HTMLElement, key: SendKey): string {
         element.setSelectionRange(start + 1, start + 1);
         return 'Enter: inserted a line break';
       }
-      const form = element instanceof HTMLInputElement ? element.closest('form') : null;
+      const form: Pick<HTMLFormElement, 'querySelector' | 'requestSubmit'> | null =
+        element instanceof HTMLInputElement ? element.closest('form') : null;
       if (form) {
         const submitBtn = form.querySelector<HTMLButtonElement>('button[type="submit"], input[type="submit"]');
         if (submitBtn) {

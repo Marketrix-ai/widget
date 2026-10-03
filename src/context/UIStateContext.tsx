@@ -23,7 +23,7 @@ interface UIStateContextType {
   uiActions: UIStateActions;
 }
 
-const UIStateContext = createContext<UIStateContextType | undefined>(undefined);
+const UIStateContext = createContext<UIStateContextType | null>(null);
 
 export const UIStateProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const config = useWidgetConfig();

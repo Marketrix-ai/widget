@@ -2,7 +2,7 @@
  * Tests for `simulateKeyAction`, the default action each agent-sent key carries out on a host-page element.
  */
 
-import { afterEach, describe, expect, it } from 'bun:test';
+import { afterEach, describe, expect, it, vi } from 'bun:test';
 
 import { $ } from '../../test/fixtures';
 import { resetDom } from '../../test/preload';
@@ -184,16 +184,16 @@ describe('simulateKeyAction ArrowLeft/ArrowRight and PageUp/PageDown', () => {
   });
 
   it('scrolls the page by one viewport', () => {
-    const scrolls: unknown[] = [];
-    const original = window.scrollBy;
-    window.scrollBy = ((options: ScrollToOptions) => scrolls.push(options.top)) as typeof window.scrollBy;
+    const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {});
     try {
       expect(simulateKeyAction(document.body, 'PageDown')).toBe('PageDown: scrolled the page');
       expect(simulateKeyAction(document.body, 'PageUp')).toBe('PageUp: scrolled the page');
+      expect(scrollBy).toHaveBeenCalledTimes(2);
+      expect(scrollBy).toHaveBeenNthCalledWith(1, { top: window.innerHeight });
+      expect(scrollBy).toHaveBeenNthCalledWith(2, { top: -window.innerHeight });
     } finally {
-      window.scrollBy = original;
+      scrollBy.mockRestore();
     }
-    expect(scrolls).toEqual([window.innerHeight, -window.innerHeight]);
   });
 });
 

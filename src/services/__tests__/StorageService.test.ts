@@ -10,9 +10,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import { z } from 'zod';
 
-import { agentMessage, credentialedConfig, mockMediaStream } from '../../test/fixtures';
+import { agentMessage, credentialedConfig, FakeMediaStream } from '../../test/fixtures';
 import type { AgentMessage, ChatMessage } from '../../types';
 import { createScreenshareMessage } from '../../utils/chat';
+import type * as StorageModule from '../StorageService';
 import {
   getChatId,
   readChatSnapshot,
@@ -25,7 +26,7 @@ import {
 } from '../StorageService';
 
 let freshImports = 0;
-const freshStorage = () => import(`../StorageService.ts?t=${freshImports++}`);
+const freshStorage = (): Promise<typeof StorageModule> => import(`../StorageService.ts?t=${freshImports++}`);
 
 describe('scopedKey', () => {
   it('keeps the three tenant-scoped browser-local keys byte-identical', () => {
@@ -205,7 +206,7 @@ describe('chat snapshot persistence', () => {
   });
 
   it('stores a screenshare as an ended notice, because a MediaStream cannot survive a reload', () => {
-    writeChatSnapshot(snapshot([createScreenshareMessage(mockMediaStream({ id: 'stream' }))]));
+    writeChatSnapshot(snapshot([createScreenshareMessage(new FakeMediaStream())]));
 
     expect(readChatSnapshot().messages[0]).toMatchObject({
       kind: 'system',

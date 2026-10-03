@@ -8,7 +8,7 @@ import { describe, expect, it } from 'bun:test';
 import { TEXT_TONE } from '../../../design-system/component-tokens';
 import { Text } from '../Text';
 
-const colorOf = (element: Element | null): string => (element as HTMLElement | null)?.style.color ?? '';
+const colorOf = (element: Element | null): string => (element instanceof HTMLElement ? element.style.color : '');
 
 describe('Text', () => {
   it('colors by tone', () => {

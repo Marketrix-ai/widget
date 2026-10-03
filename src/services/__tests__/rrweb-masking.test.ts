@@ -2,14 +2,15 @@
  * rrweb privacy tests: every input is masked by default, and both the `mtx-` and native `rr-` privacy
  * classes are honoured.
  */
+import type { record as recordFn } from '@rrweb/record';
 import { beforeEach, describe, expect, it, vi } from 'bun:test';
 
-import { mockSdkModule, restoreModuleAfterAll } from '../../test/vi-compat';
+import type { WidgetClient } from '../../sdk';
+import { mockSdk } from '../../test/vi-compat';
 
-const recordMock = vi.fn((_opts: unknown) => () => {});
-vi.mock('@rrweb/record', () => ({ record: (opts: unknown) => recordMock(opts) }));
-vi.mock('../../sdk', () => mockSdkModule({ widgetMessagePost: vi.fn().mockResolvedValue({ success: true }) }));
-restoreModuleAfterAll('../../sdk', () => import('../../sdk/index.ts?real'));
+const recordMock = vi.fn<(...args: Parameters<typeof recordFn>) => ReturnType<typeof recordFn>>(() => () => {});
+vi.mock('@rrweb/record', () => ({ record: recordMock }));
+mockSdk({ widgetMessagePost: vi.fn<WidgetClient['widgetMessagePost']>().mockResolvedValue({ success: true }) });
 
 const { RrwebSessionRecorder } = await import('../RrwebSessionRecorder');
 const { streamClient } = await import('../StreamClient');
@@ -27,11 +28,13 @@ describe('rrweb capture privacy', () => {
 
   it('honours both the mtx- and the native rr- privacy classes', async () => {
     await new RrwebSessionRecorder('chat_1').start();
-    const opts = recordMock.mock.calls[0]?.[0] as { maskTextClass: RegExp; blockClass: RegExp };
+    const { maskTextClass, blockClass } = recordMock.mock.calls[0]?.[0] ?? {};
+    if (!(maskTextClass instanceof RegExp) || !(blockClass instanceof RegExp))
+      throw new Error('expected rrweb privacy classes as patterns');
 
-    for (const cls of ['rr-mask', 'mtx-mask']) expect(opts.maskTextClass.test(cls)).toBe(true);
-    for (const cls of ['rr-block', 'mtx-block']) expect(opts.blockClass.test(cls)).toBe(true);
-    expect(opts.maskTextClass.test('unrelated')).toBe(false);
-    expect(opts.blockClass.test('unrelated')).toBe(false);
+    for (const cls of ['rr-mask', 'mtx-mask']) expect(maskTextClass.test(cls)).toBe(true);
+    for (const cls of ['rr-block', 'mtx-block']) expect(blockClass.test(cls)).toBe(true);
+    expect(maskTextClass.test('unrelated')).toBe(false);
+    expect(blockClass.test('unrelated')).toBe(false);
   });
 });

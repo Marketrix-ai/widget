@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'bun:test';
 
-import { mockMediaStream } from '../../test/fixtures';
+import { FakeMediaStream } from '../../test/fixtures';
 import {
   CHAT_FAILURE_TEXT,
   createScreenAccessRequestMessage,
@@ -28,7 +28,7 @@ describe('message construction', () => {
   });
 
   it('builds a screenshare message as its own kind', () => {
-    expect(createScreenshareMessage(mockMediaStream()).kind).toBe('screenshare');
+    expect(createScreenshareMessage(new FakeMediaStream([])).kind).toBe('screenshare');
   });
 });
 
