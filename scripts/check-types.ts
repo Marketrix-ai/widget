@@ -354,11 +354,7 @@ export function checkTypes(root: string): Issue[] {
     ),
     ...checkGoFiles(
       root,
-      execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', '-z', '*.go'], { cwd: root })
-        .toString()
-        .split('\0')
-        .filter(Boolean)
-        .map(file => join(root, file)),
+      files.filter(file => file.endsWith('.go')),
     ),
   ].sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line);
 }
