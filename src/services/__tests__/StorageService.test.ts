@@ -145,7 +145,7 @@ describe('private-mode localStorage', () => {
     expect(warnSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('warns exactly once across many denied reads, not once per read, independently of the write warning', async () => {
+  it('warns exactly once per storage across many denied reads and writes', async () => {
     const { readLocalParsed, writeLocal } = await freshStorage();
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
@@ -160,10 +160,10 @@ describe('private-mode localStorage', () => {
     readLocalParsed('key-b', z.string());
     readLocalParsed('key-c', z.string());
 
-    expect(warnSpy).toHaveBeenCalledTimes(2);
+    expect(warnSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('warns about a denied sessionStorage independently of the localStorage write warning', async () => {
+  it('warns about a denied sessionStorage independently of a denied localStorage', async () => {
     const { claimToolCall, writeLocal } = await freshStorage();
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {

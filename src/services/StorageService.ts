@@ -75,27 +75,24 @@ export function scopedKey(name: string, { mtxId }: Pick<ValidWidgetConfig, 'mtxI
   return `${name}_${mtxId ?? 'default'}`;
 }
 
-const warned = { read: false, write: false, session: false };
+const warned = new Set<string>();
 
-function warnOnce(kind: keyof typeof warned, message: string, error: unknown): void {
-  if (warned[kind]) return;
-  warned[kind] = true;
-  logWarn(message, error);
-}
-
-export function readLocalParsed<T>(key: string, schema: z.ZodType<T>): T | undefined {
-  let stored: string | null;
+function inStorage<T>(
+  kind: 'localStorage' | 'sessionStorage',
+  action: (storage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>) => T,
+): T | undefined {
   try {
-    stored = localStorage.getItem(key);
+    return action(window[kind]);
   } catch (error) {
-    warnOnce('read', '[StorageService] localStorage is unreadable, degrading to memory for this session:', error);
+    if (!warned.has(kind))
+      logWarn(`[StorageService] ${kind} is unusable, degrading to memory for this session:`, error);
+    warned.add(kind);
     return undefined;
   }
-  return parseStored(key, stored, schema);
 }
 
-function parseStored<T>(key: string, stored: string | null, schema: z.ZodType<T>): T | undefined {
-  if (stored === null) return undefined;
+function parseStored<T>(key: string, stored: string | null | undefined, schema: z.ZodType<T>): T | undefined {
+  if (!stored) return undefined;
   try {
     return schema.parse(JSON.parse(stored));
   } catch (error) {
@@ -104,12 +101,16 @@ function parseStored<T>(key: string, stored: string | null, schema: z.ZodType<T>
   }
 }
 
+export function readLocalParsed<T>(key: string, schema: z.ZodType<T>): T | undefined {
+  return parseStored(
+    key,
+    inStorage('localStorage', storage => storage.getItem(key)),
+    schema,
+  );
+}
+
 export function writeLocal(key: string, value: unknown): void {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch (error) {
-    warnOnce('write', '[StorageService] localStorage is unwritable, degrading to memory for this session:', error);
-  }
+  inStorage('localStorage', storage => storage.setItem(key, JSON.stringify(value)));
 }
 
 function loadContext(key: string): ChatContext {
@@ -136,25 +137,16 @@ export const setChatId = (chatId: string): void => updateContext({ chat_id: chat
 
 export const forgetChatId = (): void => updateContext({ chat_id: null });
 
-function sessionStore(
-  action: (storage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>) => string | null | void,
-): string | null {
-  try {
-    return action(sessionStorage) ?? null;
-  } catch (error) {
-    warnOnce('session', '[StorageService] sessionStorage is unusable, degrading to memory for this session:', error);
-    return null;
-  }
-}
-
 let tabId: string | null = null;
 
 export function claimTabId(): string {
   if (tabId !== null) return tabId;
-  tabId = sessionStore(storage => storage.getItem(TAB_ID_KEY)) ?? randomId();
-  sessionStore(storage => storage.removeItem(TAB_ID_KEY));
-  window.addEventListener('pagehide', () => sessionStore(storage => storage.setItem(TAB_ID_KEY, claimTabId())));
-  window.addEventListener('pageshow', () => sessionStore(storage => storage.removeItem(TAB_ID_KEY)));
+  tabId = inStorage('sessionStorage', storage => storage.getItem(TAB_ID_KEY)) ?? randomId();
+  inStorage('sessionStorage', storage => storage.removeItem(TAB_ID_KEY));
+  window.addEventListener('pagehide', () =>
+    inStorage('sessionStorage', storage => storage.setItem(TAB_ID_KEY, claimTabId())),
+  );
+  window.addEventListener('pageshow', () => inStorage('sessionStorage', storage => storage.removeItem(TAB_ID_KEY)));
   return tabId;
 }
 
@@ -171,11 +163,11 @@ type ToolCallClaim = 'fresh' | 'seen' | 'interrupted';
 export function claimToolCall(toolCallId: string): ToolCallClaim {
   if (pageToolCalls.has(toolCallId)) return 'seen';
   pageToolCalls.add(toolCallId);
-  const stored = sessionStore(storage => storage.getItem(STARTED_TOOL_CALLS_KEY));
+  const stored = inStorage('sessionStorage', storage => storage.getItem(STARTED_TOOL_CALLS_KEY));
   const started = parseStored(STARTED_TOOL_CALLS_KEY, stored, StartedToolCallsSchema) ?? [];
   if (started.includes(toolCallId)) return 'interrupted';
   const next = [...started, toolCallId].slice(-MAX_STARTED_TOOL_CALLS);
-  sessionStore(storage => storage.setItem(STARTED_TOOL_CALLS_KEY, JSON.stringify(next)));
+  inStorage('sessionStorage', storage => storage.setItem(STARTED_TOOL_CALLS_KEY, JSON.stringify(next)));
   return 'fresh';
 }
 

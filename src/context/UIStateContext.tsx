@@ -1,8 +1,9 @@
 /**
  * `UIStateProvider` / `useUIStateContext` — the widget's view state: open/closed, active view, current
  * mode (tell/show/do) and the error toast with whether its Retry can redial the stream. Actions are
- * stable, and `applyState` merges any partial view state. The published mode is always one the
- * tenant enabled, whatever was stored or picked before the settings changed.
+ * stable: `reportFailure` logs a failed call and toasts its visitor-facing message, and `applyState` merges
+ * any partial view state. The published mode is always one the tenant enabled, whatever was stored or picked
+ * before the settings changed.
  */
 import React, { createContext, useMemo, useState } from 'react';
 
@@ -15,6 +16,7 @@ type UIState = Pick<WidgetState, 'isOpen' | 'activeView' | 'currentMode' | 'erro
 interface UIStateActions {
   toggleWidget: () => void;
   setError: (error: string | undefined, canRetry?: boolean) => void;
+  reportFailure: (message: string) => (error: unknown) => void;
   applyState: (payload: Partial<UIState>) => void;
 }
 
@@ -34,16 +36,19 @@ export const UIStateProvider: React.FC<{ children: React.ReactNode }> = ({ child
     canRetry: false,
   });
 
-  const uiActions = useMemo<UIStateActions>(
-    () => ({
+  const uiActions = useMemo<UIStateActions>(() => {
+    const setError = (error: string | undefined, canRetry = false) =>
+      setUIState(prev => ({ ...prev, error, canRetry }));
+    return {
       toggleWidget: () => setUIState(prev => ({ ...prev, isOpen: !prev.isOpen })),
-
-      setError: (error: string | undefined, canRetry = false) => setUIState(prev => ({ ...prev, error, canRetry })),
-
-      applyState: (payload: Partial<UIState>) => setUIState(prev => ({ ...prev, ...payload })),
-    }),
-    [],
-  );
+      setError,
+      reportFailure: message => (error: unknown) => {
+        console.error(`[Widget] ${message}`, error);
+        setError(message);
+      },
+      applyState: payload => setUIState(prev => ({ ...prev, ...payload })),
+    };
+  }, []);
 
   const currentMode = effectiveMode(config, uiState.currentMode);
   const contextValue = useMemo<UIStateContextType>(
