@@ -185,7 +185,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     if (isPreviewMode) return;
-    const setError = uiActions.setError;
+    const { setError, reportFailure } = uiActions;
 
     const startToolCall = async (call: WidgetToolCall) => {
       const route = streamClient.route();
@@ -208,10 +208,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             : { type: 'tool/response', tool_call_id, success: false, error: outcome.error },
           route,
         )
-        .catch((err: unknown) => {
-          console.error('[Widget] Failed to send tool response:', err);
-          setError('Could not report that step back to the assistant — it may stop responding.');
-        });
+        .catch(reportFailure('Could not report that step back to the assistant — it may stop responding.'));
 
       if (outcome.success) outcome.afterResponseAttempt?.();
     };
@@ -245,10 +242,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const stopped = stateRef.current.task.phase === 'stopped';
       commit(s => reduceEvent(s, event, currentModeRef.current));
       if (event.type === 'tool/call' && !stopped) {
-        startToolCall(event).catch((error: unknown) => {
-          console.error('[Widget] Tool call failed:', error);
-          setError('Something went wrong running that step. Please try again.');
-        });
+        startToolCall(event).catch(reportFailure('Something went wrong running that step. Please try again.'));
       }
     };
 
@@ -267,10 +261,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     showModeService.cleanup();
     commit(s => reduceStop(s, currentModeRef.current));
     if (isPreviewMode) return;
-    streamClient.send({ type: 'chat/stop' }).catch((err: unknown) => {
-      console.error('[Widget] Failed to stop task remotely:', err);
-      uiActions.setError('Could not stop the assistant — it may still be working.');
-    });
+    streamClient
+      .send({ type: 'chat/stop' })
+      .catch(uiActions.reportFailure('Could not stop the assistant — it may still be working.'));
   }, [isPreviewMode, commit, uiActions, currentModeRef]);
 
   const clearChat = useCallback(() => {
@@ -282,10 +275,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     forgetChatId();
     getOrCreateChatId()
       .then(chatId => streamClient.connect(chatId))
-      .catch((error: unknown) => {
-        console.error('[Widget] Failed to start a new chat:', error);
-        uiActions.setError('Could not start a new chat. Please refresh the page.');
-      });
+      .catch(uiActions.reportFailure('Could not start a new chat. Please refresh the page.'));
   }, [isPreviewMode, commit, stopTask, uiActions]);
 
   const chatActions = useMemo<ChatActions>(

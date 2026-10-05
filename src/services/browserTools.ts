@@ -104,9 +104,7 @@ function typeText({ index, text, clear }: ToolArgs<'type_text'>): ToolExecutionR
       return fail(`Could not insert text into element ${index}`);
     }
   } else if (element instanceof HTMLSelectElement) {
-    element.value = text;
-    element.dispatchEvent(new Event('input', { bubbles: true }));
-    element.dispatchEvent(new Event('change', { bubbles: true }));
+    setFieldValue(element, text);
   } else {
     element.textContent = text;
     element.dispatchEvent(new Event('input', { bubbles: true }));
@@ -165,9 +163,7 @@ function selectDropdownOption({ index, option }: ToolArgs<'select_dropdown_optio
   const opt = Array.from(element.options).find(o => o.value === option || o.text === option);
   if (!opt) return fail(`Option ${option} not found`);
 
-  element.value = opt.value;
-  element.dispatchEvent(new Event('change', { bubbles: true }));
-
+  setFieldValue(element, opt.value);
   return ok(`Selected ${option}`);
 }
 

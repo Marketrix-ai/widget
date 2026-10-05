@@ -1,10 +1,11 @@
 /**
  * Simulates the default action a real keypress would take on a host-page element.
  * `simulateKeyAction` carries out what the browser withholds from a programmatic, untrusted `KeyboardEvent`
- * (focus moves, form submits, text edits); `setFieldValue` writes through the native `value` setter and fires
- * `input`/`change` so framework-controlled inputs see the change. Email and number inputs expose no caret, so
- * an edit there lands at the end of the value, where a user who just typed would have it; Backspace and Delete
- * edit only text-like fields, because a date, checkbox or color value is not a string a keypress shortens.
+ * (focus moves, form submits, text edits); `setFieldValue` writes an input, textarea or select through its
+ * native `value` setter and fires `input`/`change` so framework-controlled fields see the change. Email and
+ * number inputs expose no caret, so an edit there lands at the end of the value, where a user who just typed
+ * would have it; Backspace and Delete edit only text-like fields, because a date, checkbox or color value is not
+ * a string a keypress shortens.
  */
 import { focusablesIn } from '../utils/dom';
 import type { ToolArgs } from './browserTools';
@@ -121,14 +122,10 @@ export function simulateKeyAction(element: HTMLElement, key: SendKey): string {
 }
 
 function stepSelect(element: HTMLSelectElement, key: 'ArrowDown' | 'ArrowUp'): string {
-  const step = key === 'ArrowDown' ? 1 : -1;
-  const next = element.selectedIndex + step;
-  if (next < 0 || next >= element.options.length) {
-    return `${key}: already at ${step === 1 ? 'last' : 'first'} option`;
-  }
-  element.selectedIndex = next;
-  element.dispatchEvent(new Event('change', { bubbles: true }));
-  return `${key}: selected "${element.options[next]?.text ?? ''}"`;
+  const option = element.options[element.selectedIndex + (key === 'ArrowDown' ? 1 : -1)];
+  if (!option) return `${key}: already at ${key === 'ArrowDown' ? 'last' : 'first'} option`;
+  setFieldValue(element, option.value);
+  return `${key}: selected "${option.text}"`;
 }
 
 function deleteAt(element: HTMLInputElement | HTMLTextAreaElement, direction: 'Backspace' | 'Delete'): string {
@@ -157,11 +154,14 @@ function deleteAt(element: HTMLInputElement | HTMLTextAreaElement, direction: 'B
   return `${direction}: deleted character, value is now "${element.value}"`;
 }
 
-export function setFieldValue(el: HTMLInputElement | HTMLTextAreaElement, value: string): void {
-  const setter = Object.getOwnPropertyDescriptor(
-    el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype,
-    'value',
-  )?.set;
+export function setFieldValue(el: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement, value: string): void {
+  const prototype =
+    el instanceof HTMLTextAreaElement
+      ? HTMLTextAreaElement.prototype
+      : el instanceof HTMLSelectElement
+        ? HTMLSelectElement.prototype
+        : HTMLInputElement.prototype;
+  const setter = Object.getOwnPropertyDescriptor(prototype, 'value')?.set;
   if (setter) setter.call(el, value);
   else el.value = value;
   el.dispatchEvent(new Event('input', { bubbles: true }));
