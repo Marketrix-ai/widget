@@ -14,7 +14,7 @@ bundle — the host page supplies it.**
 bun start                # vite dev on :9001 (override PORT / VITE_PORT)
 bun run build            # dist/widget.mjs + declarations
 bun run test             # bun test; filter with `bun test <pattern>`
-bun run bundle:check     # packaging gate (size, per-dependency budgets, single chunk, React external)
+bun run check:bundle     # packaging gate (size, per-dependency budgets, single chunk, React external)
 bun run check:served     # asserts what the nginx runtime image sends over real HTTP (needs docker or TARGET_URL)
 bun run code:check       # tsc + eslint + prettier --check
 bun run ci               # every CI gate — the pre-handoff gate
@@ -48,7 +48,7 @@ GUI clients; that path is baked in at install, so after changing `rc:` re-run `l
 
 - **`codeSplitting: false` belongs on `rolldownOptions.output`** — Vite never reads it from `build`.
 - **A single chunk makes every import unconditional** — a heavy dependency behind an off-by-default flag
-  still ships to every host page. `bundle:check` budgets each bundled dependency in `DEPENDENCY_BUDGETS`;
+  still ships to every host page. `check:bundle` budgets each bundled dependency in `DEPENDENCY_BUDGETS`;
   an unlisted package fails the gate, so a new import is a deliberate line.
 - **The runtime image serves an allowlist, not `dist/`** — the sourcemap (the whole source) and `.d.ts`
   stay unpublished, and a new served file is added to the Dockerfile by hand. `.gz`/`.br` are precompressed

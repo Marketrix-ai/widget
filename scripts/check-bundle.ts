@@ -1,5 +1,5 @@
 /**
- * Packaging gate for the built widget, run last in `bun run ci`.
+ * Packaging gate for the built widget, run by `bun run ci` after the build.
  *
  * Checks the artifacts stay under their byte budgets, ship as one ES module with no CSS file, no
  * dynamic require and no bundled React, and that no dependency grew past its budget. Dependency sizes come
@@ -85,11 +85,11 @@ for (const [name, size] of [...perPackage].sort((a, b) => b[1] - a[1])) {
 }
 
 if (errors.length > 0) {
-  console.error('bundle:check failed.');
+  console.error('check:bundle failed.');
   for (const error of errors) {
     console.error(`- ${error}`);
   }
   process.exit(1);
 }
 
-console.log('bundle:check passed.');
+console.log('check:bundle passed.');
