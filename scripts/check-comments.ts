@@ -1,6 +1,6 @@
 /**
  * The one Rule 0 gate for every repo: every tracked source file — JS/TS, Python, SQL, shell, YAML and Helm
- * templates, Dockerfile, env example, proto, TOML, Terraform, Make, Tilt, CSS, nginx conf, MDX, HTML and ignore
+ * templates, Dockerfile, env example, proto, Go, TOML, Terraform, Make, Tilt, CSS, nginx conf, MDX, HTML and ignore
  * files — may carry one top docstring of at most 12 lines and no other comment. `EXEMPT` is the constitution's
  * directive list and its only implementation. `checkComments` reads JS/TS trivia through the parser, measures a
  * Python module docstring and flags every later string statement (a function or class docstring), and lexes every
@@ -41,6 +41,7 @@ const EXTENSIONS: Record<string, string> = {
   '.tpl': 'helm',
   '.sql': '--',
   '.proto': '//',
+  '.go': '//',
   '.toml': '#',
   '.tf': '#',
   '.conf': '#',
@@ -50,7 +51,7 @@ const EXTENSIONS: Record<string, string> = {
   '.py': 'py',
 };
 const EXEMPT =
-  /^(<reference|eslint-disable|prettier-ignore|@ts-|@type\s|ponytail:|!|noqa|type:\s*ignore|ty:\s*ignore|syntax=)/;
+  /^(<reference|eslint-disable|prettier-ignore|@ts-|@type\s|ponytail:|!|noqa|type:\s*ignore|ty:\s*ignore|syntax=|go:)/;
 const MAX_HEADER_LINES = 12;
 
 type Comment = { line: number; raw: string; alone: boolean; block?: boolean };
