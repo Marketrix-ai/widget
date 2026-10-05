@@ -1,6 +1,6 @@
 /**
  * Writes `<file>.gz`/`<file>.br` beside a built artifact for the Dockerfile `builder` stage and for
- * `checkServed.ts`'s length checks — the one home for the gzip/brotli parameters the runtime image serves.
+ * `check-served.ts`'s length checks — the one home for the gzip/brotli parameters the runtime image serves.
  * It uses Bun's `node:zlib`, since the `builder` stage has no node binary.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
