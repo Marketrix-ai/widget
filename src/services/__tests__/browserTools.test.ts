@@ -316,15 +316,28 @@ describe('typeText branches beyond input/textarea', () => {
     expect(execCommand).toHaveBeenCalledWith('insertText', false, 'hello');
   });
 
-  it('sets .value directly on a non-text-field element that exposes one, like a select', async () => {
-    document.body.innerHTML = '<select style="position: fixed"><option value="x">x</option></select>';
+  it('selects a select element option by its visible text, like select_dropdown_option', async () => {
+    document.body.innerHTML =
+      '<select style="position: fixed"><option value="v1">Text One</option><option value="v2">Text Two</option></select>';
     const element = $('select');
     vi.spyOn(domService, 'getValidatedElement').mockReturnValue(element);
 
-    const result = await executeTool('type_text', { index: 0, text: 'x', clear: true }, 'do');
+    const result = await executeTool('type_text', { index: 0, text: 'Text Two', clear: true }, 'do');
 
     expect(result.success).toBe(true);
-    expect(element.value).toBe('x');
+    expect(element.value).toBe('v2');
+  });
+
+  it('fails on a select element when no option matches the text, as select_dropdown_option does', async () => {
+    document.body.innerHTML = '<select style="position: fixed"><option value="v1">Text One</option></select>';
+    vi.spyOn(domService, 'getValidatedElement').mockReturnValue($('select'));
+
+    const typed = await executeTool('type_text', { index: 0, text: 'Nope', clear: true }, 'do');
+    const selected = await executeTool('select_dropdown_option', { index: 0, option: 'Nope' }, 'do');
+
+    expectFailure(typed, 'Option Nope not found');
+    expectFailure(selected, 'Option Nope not found');
+    expect($('select').value).toBe('v1');
   });
 });
 

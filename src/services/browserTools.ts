@@ -104,7 +104,7 @@ function typeText({ index, text, clear }: ToolArgs<'type_text'>): ToolExecutionR
       return fail(`Could not insert text into element ${index}`);
     }
   } else if (element instanceof HTMLSelectElement) {
-    setFieldValue(element, text);
+    return selectDropdownOption({ index, option: text });
   } else {
     element.textContent = text;
     element.dispatchEvent(new Event('input', { bubbles: true }));
