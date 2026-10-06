@@ -83,7 +83,9 @@ each a Zod union discriminated on `type`.
 - **A mode the tenant disabled is never sent** — `sendTurn` refuses it, chips of that mode are dropped and
   `UIStateContext` publishes only an enabled mode; the api refuses one too.
 - `ChatContext.sendTurn` is the one entry for a turn or chip; `chat/delta` fragments **accumulate**, then
-  `chat/response` **replaces** them by `request_id`. `stopTask` is the one stop path; a cancelled Show step
+  `chat/response` **replaces** them by `request_id`. Every event lands on the message its `request_id` names
+  (`tool/call` and `task/status` carry the dispatching turn's); one without it lands nowhere, and an ended
+  message ignores every further terminal event. `stopTask` is the one stop path; a cancelled Show step
   posts no `tool/response`.
 - **The first `tool/call` activates the task**, not `task/status running` — the api mints no task id, so
   `chat/stop` carries none. The `done` tool ends it, done or failed by its `success` arg.
