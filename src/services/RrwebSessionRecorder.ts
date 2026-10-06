@@ -1,19 +1,19 @@
 /**
  * Per-chat rrweb session recorder: captures the host page as rrweb events and ships them to the api as one
  * `rrweb/metadata` command followed by `rrweb/events` batches; `mount.tsx` builds one only when `widget_recording`
- * is on. `start()` arms rrweb once the chat registers, `stop()` tears it down and drains the buffer, and a cleared
- * chat's new thread gets a fresh session. A failed session open or batch is retried on a doubling delay, or on the
- * next registration once the stream gave up; a failed batch goes back to the front of the queue, since later batches
- * replay against its snapshot, and the buffer is capped so an unflushable recording truncates instead of growing.
- * `emit` runs on the host page inside rrweb, so an event outside the wire schema is dropped, never thrown.
+ * is on. `start()` follows the stream's state, `stop()` tears rrweb down and drains the buffer. Nothing is posted
+ * while the chat is not registered, and each newly registered chat gets a fresh session starting from a full
+ * snapshot. A failed session open or batch is retried on a doubling delay; a failed batch goes back to the front of
+ * the queue, since later batches replay against its snapshot, and the buffer is capped so an unflushable recording
+ * truncates instead of growing. `emit` runs on the host page inside rrweb, so an event outside the wire schema is
+ * dropped, never thrown.
  */
 import { record } from '@rrweb/record';
 
-import type { WidgetEvent } from '../sdk';
 import { type RrwebEvent, RrwebEventSchema } from '../sdk/contracts/rrweb';
 import { logWarn } from '../utils/log';
 import { randomId } from '../utils/randomId';
-import { streamClient, StreamGaveUpError } from './StreamClient';
+import { streamClient, type StreamState } from './StreamClient';
 
 const FLUSH_INTERVAL_MS = 500;
 const MAX_RETRY_DELAY_MS = 30_000;
@@ -21,126 +21,110 @@ const MAX_BUFFERED_EVENTS = 20_000;
 
 export class RrwebSessionRecorder {
   private events: RrwebEvent[] = [];
-  private sessionId = randomId();
+  private session: { chatId: string; id: string } | null = null;
   private stopRecording: ReturnType<typeof record> | null = null;
+  private unsubscribe: (() => void) | null = null;
   private flushTimer: ReturnType<typeof setTimeout> | undefined;
-  private startTimer: ReturnType<typeof setTimeout> | undefined;
-  private flushPromise = Promise.resolve();
+  private queue = Promise.resolve();
   private stopped = false;
   private failedPosts = 0;
-  private streamGaveUp = false;
   private warnedMalformed = false;
 
-  constructor(private chatId: string) {}
-
-  async start(): Promise<void> {
-    if (this.stopRecording || this.stopped) return;
-    streamClient.addCallbacks(this.callbacks);
-    try {
-      await this.openSession();
-    } catch (error) {
-      if (error instanceof StreamGaveUpError) {
-        logWarn(
-          '[RrwebSessionRecorder] Stream gave up before the chat registered; recording waits for a retry:',
-          error,
-        );
-        this.streamGaveUp = true;
-        return;
-      }
-      logWarn('[RrwebSessionRecorder] Failed to open the recording session, retrying:', error);
-      this.startTimer = setTimeout(this.retryStart, this.retryDelay());
-      return;
-    }
-    this.failedPosts = 0;
-    if (this.stopped || this.stopRecording) return;
-    this.stopRecording = record({
-      emit: event => {
-        const parsed = RrwebEventSchema.safeParse(event);
-        if (!parsed.success) {
-          if (!this.warnedMalformed)
-            logWarn('[RrwebSessionRecorder] Dropping an event outside the wire schema:', parsed.error);
-          this.warnedMalformed = true;
-          return;
-        }
-        if (this.events.length >= MAX_BUFFERED_EVENTS) return;
-        this.events.push(parsed.data);
-        if (!this.flushTimer && !this.streamGaveUp) this.scheduleFlush(FLUSH_INTERVAL_MS);
-      },
-      maskAllInputs: true,
-      maskTextClass: /^(rr-mask|mtx-mask)$/,
-      blockClass: /^(rr-block|mtx-block)$/,
-    });
+  start(): void {
+    if (this.unsubscribe || this.stopped) return;
+    this.unsubscribe = streamClient.subscribe(this.follow);
+    this.follow(streamClient.getState());
   }
 
-  private readonly retryStart = (): void => {
-    clearTimeout(this.startTimer);
-    this.start().catch((error: unknown) => {
-      console.error('[RrwebSessionRecorder] Failed to start recording on a retry:', error);
-    });
-  };
-
-  private readonly callbacks = {
-    onMessage: (event: WidgetEvent) => {
-      if (event.type !== 'registered' || this.stopped) return;
-      if (!this.stopRecording) {
-        if (!this.streamGaveUp) return;
-        this.streamGaveUp = false;
-        this.chatId = event.chat_id;
-        this.retryStart();
-        return;
-      }
-      if (event.chat_id === this.chatId) {
-        if (this.streamGaveUp) {
-          this.streamGaveUp = false;
-          void this.flush();
-        }
-        return;
-      }
-      this.followChat(event.chat_id).catch((error: unknown) => {
-        console.error('[RrwebSessionRecorder] Failed to move the recording to the new chat:', error);
-      });
-    },
-    onError: (error: Error) => {
-      if (!(error instanceof StreamGaveUpError)) return;
-      this.streamGaveUp = true;
-      clearTimeout(this.flushTimer);
-      this.flushTimer = undefined;
-    },
-  };
-
-  private async followChat(chatId: string): Promise<void> {
-    await this.flush();
-    this.events = [];
-    this.streamGaveUp = false;
-    this.failedPosts = 0;
-    this.chatId = chatId;
-    this.sessionId = randomId();
-    await this.openSession();
-    if (!this.stopped) record.takeFullSnapshot();
-  }
-
-  private async openSession(): Promise<void> {
-    await streamClient.ready(this.chatId);
-    if (this.stopped) return;
-    await streamClient.send(
-      {
-        type: 'rrweb/metadata',
-        rrweb_session_id: this.sessionId,
-        url: window.location.href,
-        timestamp: Date.now(),
-        viewport: { width: window.innerWidth, height: window.innerHeight },
-      },
-      { chatId: this.chatId },
-    );
-  }
-
-  stop(): void {
+  stop(): Promise<void> {
     this.stopped = true;
-    clearTimeout(this.startTimer);
-    streamClient.removeCallbacks(this.callbacks);
+    this.unsubscribe?.();
     this.stopRecording?.();
     this.stopRecording = null;
-    void this.flush();
+    return this.flush();
+  }
+
+  private readonly follow = (state: StreamState): void => {
+    if (state.phase === 'registered') void this.flush();
+  };
+
+  private flush(): Promise<void> {
+    this.queue = this.queue.then(async () => {
+      clearTimeout(this.flushTimer);
+      this.flushTimer = undefined;
+      const state = streamClient.getState();
+      if (!this.stopped) {
+        if (state.phase !== 'registered') return;
+        if (this.session?.chatId !== state.chatId && !(await this.openSession(state.chatId))) return;
+      }
+      await this.post();
+    });
+    return this.queue;
+  }
+
+  private async openSession(chatId: string): Promise<boolean> {
+    if (this.session) {
+      await this.post();
+      this.events = [];
+    }
+    const id = randomId();
+    try {
+      await streamClient.send(
+        {
+          type: 'rrweb/metadata',
+          rrweb_session_id: id,
+          url: window.location.href,
+          timestamp: Date.now(),
+          viewport: { width: window.innerWidth, height: window.innerHeight },
+        },
+        { chatId },
+      );
+    } catch (error) {
+      logWarn('[RrwebSessionRecorder] Failed to open the recording session, retrying:', error);
+      this.scheduleFlush(this.retryDelay());
+      return false;
+    }
+    this.failedPosts = 0;
+    if (this.stopped) return false;
+    this.session = { chatId, id };
+    if (this.stopRecording) record.takeFullSnapshot();
+    else
+      this.stopRecording = record({
+        emit: this.emit,
+        maskAllInputs: true,
+        maskTextClass: /^(rr-mask|mtx-mask)$/,
+        blockClass: /^(rr-block|mtx-block)$/,
+      });
+    return true;
+  }
+
+  private readonly emit = (event: unknown): void => {
+    const parsed = RrwebEventSchema.safeParse(event);
+    if (!parsed.success) {
+      if (!this.warnedMalformed)
+        logWarn('[RrwebSessionRecorder] Dropping an event outside the wire schema:', parsed.error);
+      this.warnedMalformed = true;
+      return;
+    }
+    if (this.events.length >= MAX_BUFFERED_EVENTS) return;
+    this.events.push(parsed.data);
+    if (!this.flushTimer) this.scheduleFlush(FLUSH_INTERVAL_MS);
+  };
+
+  private async post(): Promise<void> {
+    if (!this.session || !this.events.length) return;
+    const events = this.events.splice(0);
+    try {
+      await streamClient.send(
+        { type: 'rrweb/events', rrweb_session_id: this.session.id, events },
+        { chatId: this.session.chatId },
+      );
+      this.failedPosts = 0;
+    } catch (error) {
+      this.events = events.concat(this.events).slice(0, MAX_BUFFERED_EVENTS);
+      logWarn('[RrwebSessionRecorder] Failed to record session events, requeued for retry:', error);
+      if (!this.stopped) this.scheduleFlush(this.retryDelay());
+    }
   }
 
   private retryDelay(): number {
@@ -148,28 +132,7 @@ export class RrwebSessionRecorder {
   }
 
   private scheduleFlush(delayMs: number): void {
+    clearTimeout(this.flushTimer);
     this.flushTimer = setTimeout(() => void this.flush(), delayMs);
-  }
-
-  private flush(): Promise<void> {
-    this.flushPromise = this.flushPromise.then(async () => {
-      clearTimeout(this.flushTimer);
-      this.flushTimer = undefined;
-      const events = this.events.splice(0);
-      if (!events.length) return;
-      try {
-        await streamClient.send(
-          { type: 'rrweb/events', rrweb_session_id: this.sessionId, events },
-          { chatId: this.chatId },
-        );
-        this.failedPosts = 0;
-      } catch (error) {
-        this.events = events.concat(this.events).slice(0, MAX_BUFFERED_EVENTS);
-        logWarn('[RrwebSessionRecorder] Failed to record session events, requeued for retry:', error);
-        if (this.stopped || this.streamGaveUp) return;
-        this.scheduleFlush(this.retryDelay());
-      }
-    });
-    return this.flushPromise;
   }
 }

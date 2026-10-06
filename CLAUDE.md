@@ -67,7 +67,8 @@ each a Zod union discriminated on `type`.
 
 - **`application_id` is never a widget input; the api binds recordings and chats to the credentials'
   application.**
-- **`open` is the transport, `registered` is the chat** — `isConnected()` reads `registered`, and a
+- **The stream's lifecycle is one `StreamState`** owned by `streamClient`; the recorder and the banner
+  subscribe to it and keep no flags of their own. `open` is the transport, `registered` is the chat, and a
   command is accepted only into a registered chat. Reconnect backs off exponentially, max 10 attempts, and
   gives up on a `chat/error` with `request_id === 'auth'`.
 - **A re-register gets only what the tab missed.** The api resends an unanswered `tool/call` to its tab on

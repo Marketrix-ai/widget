@@ -12,7 +12,7 @@ const REAL_SDK = { ...sdk };
 
 export async function advanceTimersByTimeAsync(ms: number): Promise<void> {
   vi.advanceTimersByTime(ms);
-  await Promise.resolve();
+  for (let tick = 0; tick < 10; tick++) await Promise.resolve();
 }
 
 export async function waitFor<T>(check: () => T, timeout = 1000): Promise<T> {
