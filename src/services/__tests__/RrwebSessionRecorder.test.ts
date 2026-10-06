@@ -1,8 +1,8 @@
 /**
- * Tests for `RrwebSessionRecorder`: a rejected flush caps the buffer without dropping the Meta/
- * FullSnapshot baseline, retries keep going even with no new events on a doubling delay that pauses while the
- * stream has given up, a rejected session open is retried, start/stop respect an in-flight metadata post and the stream's registration, and a
- * cleared chat moves the recording to its new thread.
+ * Tests for `RrwebSessionRecorder`: a rejected flush caps the buffer without dropping the Meta/FullSnapshot
+ * baseline, retries keep going even with no new events on a doubling delay that pauses while the chat is not
+ * registered, a rejected session open is retried, start/stop respect an in-flight metadata post and the stream's
+ * registration, and a newly registered chat gets its own session.
  */
 import type { record as recordFn } from '@rrweb/record';
 import { EventType } from '@rrweb/types';
@@ -14,7 +14,7 @@ import type { RrwebEvent } from '../../sdk/contracts/rrweb';
 import { asStreamClientInternals, flushMicrotasks } from '../../test/fixtures';
 import { advanceTimersByTimeAsync, mockSdk } from '../../test/vi-compat';
 import { RrwebSessionRecorder } from '../RrwebSessionRecorder';
-import { streamClient, StreamGaveUpError } from '../StreamClient';
+import type { StreamState } from '../StreamClient';
 
 const record = vi.fn<(...args: Parameters<typeof recordFn>) => ReturnType<typeof recordFn>>(() => vi.fn());
 vi.mock('@rrweb/record', () => ({ record }));
@@ -28,11 +28,26 @@ const lastPostedEvents = () => {
   return command.events;
 };
 
+const registered = (chatId = 'chat-1'): StreamState => ({ phase: 'registered', chatId, gen: 1 });
+const gaveUp: StreamState = { phase: 'gaveUp', chatId: 'chat-1', reason: 'exhausted' };
+const enter = (state: StreamState) => {
+  asStreamClientInternals().state = state;
+};
+
+const recorders: RrwebSessionRecorder[] = [];
+const newRecorder = (): RrwebSessionRecorder => {
+  const recorder = new RrwebSessionRecorder();
+  recorders.push(recorder);
+  return recorder;
+};
+
 beforeEach(() => {
-  vi.spyOn(streamClient, 'ready').mockResolvedValue();
+  enter(registered());
 });
 
-afterEach(() => {
+afterEach(async () => {
+  await Promise.all(recorders.splice(0).map(recorder => recorder.stop()));
+  enter({ phase: 'idle' });
   vi.restoreAllMocks();
   vi.clearAllMocks();
 });
@@ -57,8 +72,9 @@ const incrementalEvent = (timestamp: number): Extract<RrwebEvent, { type: 3 }> =
 
 const startRecorder = async (): Promise<{ recorder: RrwebSessionRecorder; emit: Emit }> => {
   widgetMessagePost.mockResolvedValueOnce({ success: true });
-  const recorder = new RrwebSessionRecorder('chat-1');
-  await recorder.start();
+  const recorder = newRecorder();
+  recorder.start();
+  await waitFor(() => expect(record).toHaveBeenCalled());
   const emit = record.mock.calls[0]?.[0]?.emit;
   if (!emit) throw new Error('expected @rrweb/record to have been called with an emit');
   return { recorder, emit };
@@ -142,20 +158,20 @@ describe('a flush that keeps failing', () => {
     vi.useRealTimers();
   });
 
-  it('stops retrying once the stream gives up and resumes when it registers again', async () => {
+  it('stops retrying while the chat is not registered and resumes when it registers again', async () => {
     vi.useFakeTimers();
     const { recorder, emit } = await startRecorder();
     widgetMessagePost.mockRejectedValueOnce(new Error('offline'));
 
     emit(metaEvent(0));
     await advanceTimersByTimeAsync(500);
-    asStreamClientInternals().giveUp('Could not reconnect to the assistant. Try again.');
+    enter(gaveUp);
     emit(incrementalEvent(1));
     await advanceTimersByTimeAsync(120_000);
     expect(widgetMessagePost).toHaveBeenCalledTimes(2);
 
     widgetMessagePost.mockResolvedValueOnce({ success: true });
-    asStreamClientInternals().handleMessage({ type: 'registered', chat_id: 'chat-1' });
+    enter(registered());
     await flushMicrotasks();
     const events = lastPostedEvents();
     expect(widgetMessagePost).toHaveBeenCalledTimes(3);
@@ -165,15 +181,15 @@ describe('a flush that keeps failing', () => {
   });
 });
 
-describe('a recorder whose stream has given up', () => {
+describe('a recorder whose chat is not registered', () => {
   it('bounds the buffer while nothing flushes', async () => {
     vi.useFakeTimers();
     const { recorder, emit } = await startRecorder();
-    asStreamClientInternals().giveUp('Could not reconnect to the assistant. Try again.');
+    enter(gaveUp);
 
     for (let i = 0; i < 20_010; i++) emit(incrementalEvent(i));
     widgetMessagePost.mockResolvedValueOnce({ success: true });
-    asStreamClientInternals().handleMessage({ type: 'registered', chat_id: 'chat-1' });
+    enter(registered());
     await flushMicrotasks();
 
     const events = lastPostedEvents();
@@ -186,10 +202,10 @@ describe('a recorder whose stream has given up', () => {
     vi.useFakeTimers();
     Object.assign(record, { takeFullSnapshot: vi.fn() });
     const { recorder, emit } = await startRecorder();
-    asStreamClientInternals().giveUp('Could not reconnect to the assistant. Try again.');
+    enter(gaveUp);
     widgetMessagePost.mockResolvedValue({ success: true });
 
-    asStreamClientInternals().handleMessage({ type: 'registered', chat_id: 'chat-2' });
+    enter(registered('chat-2'));
     await waitFor(() => expect(widgetMessagePost.mock.lastCall?.[0].chat_id).toBe('chat-2'));
     emit(incrementalEvent(1));
     await advanceTimersByTimeAsync(500);
@@ -202,18 +218,18 @@ describe('a recorder whose stream has given up', () => {
   });
 });
 
-describe('a stream that gives up before the chat first registers', () => {
-  it('starts recording once a retry registers the chat', async () => {
-    vi.spyOn(streamClient, 'ready')
-      .mockRejectedValueOnce(new StreamGaveUpError('Could not reconnect to the assistant. Try again.'))
-      .mockResolvedValue();
+describe('a stream not yet registered', () => {
+  it('starts recording once the chat registers, with a metadata post carrying no ids of its own', async () => {
+    enter({ phase: 'connecting', chatId: 'chat-1', gen: 1, attempt: 0 });
     widgetMessagePost.mockResolvedValue({ success: true });
-    const recorder = new RrwebSessionRecorder('chat-1');
+    const recorder = newRecorder();
 
-    await recorder.start();
+    recorder.start();
+    await flushMicrotasks();
     expect(record).not.toHaveBeenCalled();
+    expect(widgetMessagePost).not.toHaveBeenCalled();
 
-    asStreamClientInternals().handleMessage({ type: 'registered', chat_id: 'chat-1' });
+    enter(registered());
     await waitFor(() => expect(record).toHaveBeenCalledTimes(1));
     expect(widgetMessagePost.mock.lastCall?.[0].command.type).toBe('rrweb/metadata');
     expect(widgetMessagePost.mock.lastCall?.[0].command).not.toHaveProperty('chat_id');
@@ -226,11 +242,11 @@ describe('a session open the api rejects', () => {
   it('retries after the backoff delay and starts recording, without throwing into the host page', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     widgetMessagePost.mockRejectedValueOnce(new Error('503')).mockResolvedValue({ success: true });
-    const recorder = new RrwebSessionRecorder('chat-1');
+    const recorder = newRecorder();
 
-    await recorder.start();
+    recorder.start();
+    await waitFor(() => expect(warn.mock.calls.flat().join(' ')).toContain('503'));
     expect(record).not.toHaveBeenCalled();
-    expect(warn.mock.calls.flat().join(' ')).toContain('503');
 
     await waitFor(() => expect(record).toHaveBeenCalledTimes(1));
     expect(widgetMessagePost).toHaveBeenCalledTimes(2);
@@ -246,12 +262,13 @@ describe('RrwebSessionRecorder lifecycle', () => {
         resolveMetadata = () => resolve({ success: true });
       }),
     );
-    const recorder = new RrwebSessionRecorder('old-chat');
+    const recorder = newRecorder();
 
-    const start = recorder.start();
+    recorder.start();
+    await flushMicrotasks();
     recorder.stop();
     resolveMetadata();
-    await start;
+    await flushMicrotasks();
 
     expect(record).not.toHaveBeenCalled();
   });
@@ -278,47 +295,22 @@ describe('a recorder already recording', () => {
     record.mockClear();
     widgetMessagePost.mockClear();
 
-    await recorder.start();
+    recorder.start();
+    await flushMicrotasks();
 
     expect(record).not.toHaveBeenCalled();
     expect(widgetMessagePost).not.toHaveBeenCalled();
   });
 });
 
-describe('a recorder posting into a chat the api has not registered', () => {
-  it('holds the metadata post until the stream is registered', async () => {
-    let register!: () => void;
-    const ready = vi.spyOn(streamClient, 'ready').mockReturnValue(
-      new Promise<void>(resolve => {
-        register = resolve;
-      }),
-    );
-    widgetMessagePost.mockResolvedValueOnce({ success: true });
-
-    const start = new RrwebSessionRecorder('chat-1').start();
-    await flushMicrotasks();
-
-    expect(ready).toHaveBeenCalledWith('chat-1');
-    expect(widgetMessagePost).not.toHaveBeenCalled();
-
-    register();
-    await start;
-
-    expect(widgetMessagePost).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe('a cleared chat', () => {
+describe('a newly registered chat', () => {
   it('moves the recording to the new thread as a fresh session starting from a full snapshot', async () => {
     const takeFullSnapshot = vi.fn();
     Object.assign(record, { takeFullSnapshot });
-    const listen = vi.spyOn(streamClient, 'addCallbacks');
     const { recorder } = await startRecorder();
-    const onMessage = listen.mock.calls[0]?.[0].onMessage;
-    if (!onMessage) throw new Error('expected the recorder to listen to the stream');
     widgetMessagePost.mockResolvedValue({ success: true });
 
-    onMessage({ type: 'registered', chat_id: 'chat-2' });
+    enter(registered('chat-2'));
     await waitFor(() => expect(takeFullSnapshot).toHaveBeenCalledTimes(1));
 
     const metadata = widgetMessagePost.mock.calls

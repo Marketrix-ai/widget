@@ -10,7 +10,7 @@ import { vi } from 'bun:test';
 
 import { WidgetSettingsDataSchema } from '../sdk/contracts/widgetSettings';
 import type { WidgetToolCall } from '../services/browserTools';
-import { streamClient } from '../services/StreamClient';
+import { streamClient, type StreamState } from '../services/StreamClient';
 import type { CredentialedConfig } from '../services/WidgetService';
 import type { AgentMessage, ChatMessage, ValidWidgetConfig, WidgetSettingsData } from '../types';
 
@@ -199,52 +199,18 @@ export function $<S extends string>(selector: S, root: ParentNode = document): F
 type StreamClient = typeof streamClient;
 
 interface StreamClientTestHandle {
-  chatId: StreamClient['chatId'];
-  status: StreamClient['status'];
-  tornDown: StreamClient['tornDown'];
-  credentialRejected: StreamClient['credentialRejected'];
-  reconnectAttempts: StreamClient['reconnectAttempts'];
-  scheduleReconnect: StreamClient['scheduleReconnect'];
+  state: StreamState;
   handleMessage: StreamClient['handleMessage'];
-  isConnected: StreamClient['isConnected'];
-  notifyError: StreamClient['notifyError'];
-  giveUp: (message: string) => void;
+  backoff: StreamClient['backoff'];
 }
 
 export const asStreamClientInternals = (): StreamClientTestHandle => ({
-  get chatId() {
-    return streamClient['chatId'];
+  get state() {
+    return streamClient.getState();
   },
-  set chatId(value) {
-    streamClient['chatId'] = value;
+  set state(value) {
+    streamClient['transition'](value);
   },
-  get status() {
-    return streamClient['status'];
-  },
-  set status(value) {
-    streamClient['status'] = value;
-  },
-  get tornDown() {
-    return streamClient['tornDown'];
-  },
-  set tornDown(value) {
-    streamClient['tornDown'] = value;
-  },
-  get credentialRejected() {
-    return streamClient['credentialRejected'];
-  },
-  set credentialRejected(value) {
-    streamClient['credentialRejected'] = value;
-  },
-  get reconnectAttempts() {
-    return streamClient['reconnectAttempts'];
-  },
-  set reconnectAttempts(value) {
-    streamClient['reconnectAttempts'] = value;
-  },
-  scheduleReconnect: () => streamClient['scheduleReconnect'](),
   handleMessage: event => streamClient['handleMessage'](event),
-  isConnected: () => streamClient['isConnected'](),
-  notifyError: error => streamClient['notifyError'](error),
-  giveUp: message => streamClient['giveUp'](message),
+  backoff: (chatId, failed) => streamClient['backoff'](chatId, failed),
 });

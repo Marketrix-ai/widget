@@ -16,7 +16,6 @@ import { themeCssProperties } from './design-system/semantic-tokens';
 import shadowStyles from './index.css?inline';
 import { configureSdk } from './sdk';
 import { DEFAULT_WIDGET_SETTINGS } from './sdk/contracts/widgetSettings';
-import { getOrCreateChatId } from './services/chatThread';
 import { RrwebSessionRecorder } from './services/RrwebSessionRecorder';
 import { stopScreenShare } from './services/ScreenShareService';
 import { showModeService } from './services/ShowModeService';
@@ -101,18 +100,6 @@ export function mountPreview(config: ValidWidgetConfig, host: HTMLElement | unde
   mountActive(config, host);
 }
 
-async function startRecording(generation: number): Promise<void> {
-  const chatId = await getOrCreateChatId();
-  if (generation !== lifecycleGeneration) return;
-  const recorder = new RrwebSessionRecorder(chatId);
-  rrwebSessionRecorder = recorder;
-  await recorder.start();
-  if (generation !== lifecycleGeneration) {
-    recorder.stop();
-    if (rrwebSessionRecorder === recorder) rrwebSessionRecorder = null;
-  }
-}
-
 async function initWidgetInternal(config: MarketrixConfig, host: HTMLElement | undefined, generation: number) {
   window.__mtx = { state: 'initializing' };
 
@@ -141,9 +128,8 @@ async function initWidgetInternal(config: MarketrixConfig, host: HTMLElement | u
   mountActive(finalConfig, host, config);
 
   if (finalConfig.widget_recording) {
-    startRecording(generation).catch((error: unknown) => {
-      if (generation === lifecycleGeneration) console.error('[Widget] Failed to start session recording:', error);
-    });
+    rrwebSessionRecorder = new RrwebSessionRecorder();
+    rrwebSessionRecorder.start();
   }
 }
 
@@ -161,7 +147,7 @@ export const initWidget = (config: MarketrixConfig, host?: HTMLElement): Promise
 
 export const unmountWidget = (): void => {
   lifecycleGeneration++;
-  rrwebSessionRecorder?.stop();
+  void rrwebSessionRecorder?.stop();
   rrwebSessionRecorder = null;
   streamClient.disconnect();
   stopScreenShare();

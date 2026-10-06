@@ -17,7 +17,7 @@ import { getOrCreateChatId } from '../services/chatThread';
 import { activeScreenStream, startScreenShare, subscribeScreenShare } from '../services/ScreenShareService';
 import { showModeService } from '../services/ShowModeService';
 import { claimToolCall, forgetChatId } from '../services/StorageService';
-import { streamClient, StreamGaveUpError } from '../services/StreamClient';
+import { GAVE_UP_TEXT, streamClient } from '../services/StreamClient';
 import type { ChatMessage, InstructionType } from '../types';
 import {
   CHAT_FAILURE_TEXT,
@@ -94,9 +94,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const stateRef = useRef<ChatState>(state);
   const currentModeRef = useRef(uiState.currentMode);
   currentModeRef.current = uiState.currentMode;
-  const currentErrorRef = useRef(uiState.error);
-  currentErrorRef.current = uiState.error;
-  const lastStreamErrorRef = useRef<string | undefined>(undefined);
 
   const commit = useCallback((transition: (s: ChatState) => ChatState) => {
     const prev = stateRef.current;
@@ -185,7 +182,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     if (isPreviewMode) return;
-    const { setError, reportFailure } = uiActions;
+    const { reportFailure } = uiActions;
 
     const startToolCall = async (call: WidgetToolCall) => {
       const route = streamClient.route();
@@ -230,13 +227,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } else if (event.type === 'chat/error') {
         logWarn('[Widget] Chat error from server:', event.error);
-      } else if (
-        event.type === 'registered' &&
-        lastStreamErrorRef.current !== undefined &&
-        currentErrorRef.current === lastStreamErrorRef.current
-      ) {
-        lastStreamErrorRef.current = undefined;
-        setError(undefined);
       }
 
       const stopped = stateRef.current.task.phase === 'stopped';
@@ -246,16 +236,15 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     };
 
-    const onError = (error: Error) => {
-      setError(error.message, streamClient.canReconnect());
-      lastStreamErrorRef.current = error.message;
-      if (error instanceof StreamGaveUpError) commit(s => reduceTransportFailure(s, error.message));
+    const offEvent = streamClient.onEvent(onMessage);
+    const offState = streamClient.subscribe(stream => {
+      if (stream.phase === 'gaveUp') commit(s => reduceTransportFailure(s, GAVE_UP_TEXT[stream.reason]));
+    });
+    return () => {
+      offEvent();
+      offState();
     };
-
-    const callbacks = { onMessage, onError };
-    streamClient.addCallbacks(callbacks);
-    return () => streamClient.removeCallbacks(callbacks);
-  }, [isPreviewMode, commit, uiActions, currentModeRef, currentErrorRef]);
+  }, [isPreviewMode, commit, uiActions, currentModeRef]);
 
   const stopTask = useCallback(() => {
     showModeService.cleanup();

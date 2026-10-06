@@ -459,6 +459,7 @@ const ErrorProbe = () => {
       <div data-testid='placeholder-id'>{messages.find(isPending)?.id ?? ''}</div>
       <button data-testid='send' onClick={() => void actions.sendTurn('hi', 'tell')} />
       <button data-testid='stop' onClick={actions.stopTask} />
+      <button data-testid='dismiss' onClick={() => actions.setError(undefined)} />
     </>
   );
 };
@@ -538,40 +539,40 @@ describe('external-interaction failures never reach the customer page raw, and e
   });
 });
 
-describe('a transient stream failure banner clears once the stream recovers', () => {
-  it('shows the failure, then the next registered event clears exactly that banner', async () => {
+describe('the stream banner is derived from the stream state', () => {
+  afterEach(() => {
+    asStreamClientInternals().state = { phase: 'idle' };
+  });
+
+  it('shows while reconnecting and clears once the stream registers again', () => {
     render(
       <ChatHarness previewMode={false}>
         <ErrorProbe />
       </ChatHarness>,
     );
-
     expect(screen.getByTestId('error-banner')).toHaveTextContent('');
 
     act(() => {
-      asStreamClientInternals().notifyError(new Error('Stream connection failed'));
+      asStreamClientInternals().state = { phase: 'backoff', chatId: 'chat-1', attempt: 1 };
     });
-    expect(screen.getByTestId('error-banner')).toHaveTextContent('Stream connection failed');
+    expect(screen.getByTestId('error-banner')).toHaveTextContent('Reconnecting');
 
     act(() => {
-      asStreamClientInternals().handleMessage({ type: 'registered', chat_id: 'stream-recovers' });
+      asStreamClientInternals().state = { phase: 'registered', chatId: 'chat-1', gen: 2 };
     });
     expect(screen.getByTestId('error-banner')).toHaveTextContent('');
   });
 
-  it('never clears a different error already on screen when the stream happens to recover', async () => {
+  it('never hides a different error already on screen, and returns once that one is dismissed', async () => {
     vi.spyOn(streamClient, 'send').mockRejectedValue(new Error('boom'));
-
     render(
       <ChatHarness previewMode={false}>
         <ErrorProbe />
       </ChatHarness>,
     );
-
     act(() => {
-      asStreamClientInternals().notifyError(new Error('Stream connection failed'));
+      asStreamClientInternals().state = { phase: 'backoff', chatId: 'chat-1', attempt: 1 };
     });
-    expect(screen.getByTestId('error-banner')).toHaveTextContent('Stream connection failed');
 
     await act(async () => {
       screen.getByTestId('stop').click();
@@ -580,12 +581,27 @@ describe('a transient stream failure banner clears once the stream recovers', ()
       'Could not stop the assistant — it may still be working.',
     );
 
-    act(() => {
-      asStreamClientInternals().handleMessage({ type: 'registered', chat_id: 'stream-recovers-2' });
+    await act(async () => {
+      screen.getByTestId('dismiss').click();
     });
-    expect(screen.getByTestId('error-banner')).toHaveTextContent(
-      'Could not stop the assistant — it may still be working.',
+    expect(screen.getByTestId('error-banner')).toHaveTextContent('Reconnecting');
+  });
+
+  it('settles a pending reply as failed once the stream gives up', async () => {
+    render(
+      <ChatHarness previewMode={false}>
+        <ErrorProbe />
+      </ChatHarness>,
     );
+    await act(async () => screen.getByTestId('send').click());
+    await waitFor(() => expect(screen.getByTestId('awaiting')).toHaveTextContent('true'));
+
+    act(() => {
+      asStreamClientInternals().state = { phase: 'gaveUp', chatId: 'chat-1', reason: 'exhausted' };
+    });
+
+    expect(screen.getByTestId('awaiting')).toHaveTextContent('false');
+    expect(visibleText()).toContain('Could not reconnect to the assistant. Try again.');
   });
 });
 

@@ -17,7 +17,7 @@ import { showModeService } from '../services/ShowModeService';
 import { writeChatSnapshot } from '../services/StorageService';
 import { streamClient } from '../services/StreamClient';
 import * as WidgetService from '../services/WidgetService';
-import { $, credentialedConfig } from '../test/fixtures';
+import { $, asStreamClientInternals, credentialedConfig } from '../test/fixtures';
 import { dragFabAndResize, renderWidget } from '../test/renderWidget';
 import { mockSdk } from '../test/vi-compat';
 
@@ -236,7 +236,6 @@ describe('unmountWidget stops an active rrweb session recording started by the r
     vi.spyOn(WidgetService, 'loadWidgetConfig').mockResolvedValue(credentialedConfig({ widget_recording: true }));
     vi.spyOn(chatThread, 'getOrCreateChatId').mockResolvedValue('chat-1');
     vi.spyOn(streamClient, 'connect').mockResolvedValue();
-    vi.spyOn(streamClient, 'ready').mockResolvedValue();
     const stopRecording = vi.fn();
     record.mockReturnValue(stopRecording);
 
@@ -244,6 +243,9 @@ describe('unmountWidget stops an active rrweb session recording started by the r
     document.body.appendChild(container);
 
     await act(() => initWidget({ mtxId: 'rec-1', mtxKey: 'key', mtxApiHost: 'https://api.test' }, container));
+    act(() => {
+      asStreamClientInternals().state = { phase: 'registered', chatId: 'chat-1', gen: 1 };
+    });
     await waitFor(() => expect(record).toHaveBeenCalledTimes(1));
 
     act(() => unmountWidget());
