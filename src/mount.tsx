@@ -2,8 +2,9 @@
  * The widget's mount lifecycle behind `index.tsx`: `renderWidget` mounts one widget in its own closed shadow
  * root, `initWidget` resolves credentials and mounts (coalescing concurrent calls), `previewConfig`/`mountPreview`
  * mount settings with no api, `unmountWidget`/`updateMarketrixConfig` tear down or re-mount, and
- * `autoInitializeWidget` drives the script-tag path. `window.__mtx` survives the module executing twice, and
- * `mtx-api-host` has no default because an unset host would post widget traffic at the host page's own origin.
+ * `autoInitializeWidget` drives the script-tag path. Each mount runs in one `WidgetSession` that owns everything it
+ * started, so unmounting is closing it. `window.__mtx` survives the module executing twice, and `mtx-api-host` has
+ * no default because an unset host would post widget traffic at the host page's own origin.
  */
 import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
@@ -32,18 +33,36 @@ declare global {
   }
 }
 
+interface WidgetSession {
+  signal: AbortSignal;
+  own: (dispose: () => void) => void;
+  close: () => void;
+}
+
 interface ActiveWidget {
   config: ValidWidgetConfig;
   input: MarketrixConfig | undefined;
   host: HTMLElement | undefined;
-  unmount: () => void;
 }
 
+let session: WidgetSession | null = null;
 let active: ActiveWidget | null = null;
 let initPromise: Promise<void> | null = null;
-let lifecycleGeneration = 0;
-let rrwebSessionRecorder: RrwebSessionRecorder | null = null;
 let noticeRoot: Root | null = null;
+
+function openSession(): WidgetSession {
+  const controller = new AbortController();
+  const disposers: (() => void)[] = [];
+  session = {
+    signal: controller.signal,
+    own: dispose => disposers.push(dispose),
+    close: () => {
+      controller.abort();
+      for (const dispose of disposers.splice(0).reverse()) dispose();
+    },
+  };
+  return session;
+}
 
 const attachShadowMount = (container: HTMLElement, mountId: string, styleNonce?: string | undefined) => {
   const shadowRoot = container.attachShadow({ mode: 'closed' });
@@ -86,8 +105,16 @@ export function renderWidget(config: ValidWidgetConfig, host?: HTMLElement): () 
   };
 }
 
-function mountActive(config: ValidWidgetConfig, host: HTMLElement | undefined, input?: MarketrixConfig): void {
-  active = { config, input, host, unmount: renderWidget(config, host) };
+function mountActive(
+  owner: WidgetSession,
+  config: ValidWidgetConfig,
+  host: HTMLElement | undefined,
+  input?: MarketrixConfig,
+): void {
+  active = { config, input, host };
+  owner.own(renderWidget(config, host));
+  owner.own(stopScreenShare);
+  owner.own(() => showModeService.cleanup());
   window.__mtx = { state: 'active' };
 }
 
@@ -97,10 +124,10 @@ export function previewConfig(settings: WidgetSettingsData, baseConfig: ClientOw
 
 export function mountPreview(config: ValidWidgetConfig, host: HTMLElement | undefined): void {
   unmountWidget();
-  mountActive(config, host);
+  mountActive(openSession(), config, host);
 }
 
-async function initWidgetInternal(config: MarketrixConfig, host: HTMLElement | undefined, generation: number) {
+async function initWidgetInternal(owner: WidgetSession, config: MarketrixConfig, host: HTMLElement | undefined) {
   window.__mtx = { state: 'initializing' };
 
   showHostPageNotice('Loading widget settings...', 'info', config.styleNonce);
@@ -110,12 +137,12 @@ async function initWidgetInternal(config: MarketrixConfig, host: HTMLElement | u
     configureSdk(config.mtxApiHost);
     finalConfig = await loadWidgetConfig(config);
   } catch (error) {
-    if (generation !== lifecycleGeneration) return;
+    if (owner.signal.aborted) return;
     showHostPageNotice(errorMessage(error, 'Failed to initialize widget'), 'error', config.styleNonce);
     window.__mtx = undefined;
     throw error;
   }
-  if (generation !== lifecycleGeneration) return;
+  if (owner.signal.aborted) return;
   hideHostPageNotice();
 
   if (!finalConfig.widget_enabled) {
@@ -125,11 +152,13 @@ async function initWidgetInternal(config: MarketrixConfig, host: HTMLElement | u
 
   scopeStorageTo(finalConfig);
   streamClient.setCredentials({ marketrix_id: finalConfig.mtxId, marketrix_key: finalConfig.mtxKey });
-  mountActive(finalConfig, host, config);
+  owner.own(() => streamClient.disconnect());
+  mountActive(owner, finalConfig, host, config);
 
   if (finalConfig.widget_recording) {
-    rrwebSessionRecorder = new RrwebSessionRecorder();
-    rrwebSessionRecorder.start();
+    const recorder = new RrwebSessionRecorder();
+    recorder.start();
+    owner.own(() => void recorder.stop());
   }
 }
 
@@ -137,8 +166,7 @@ export const initWidget = (config: MarketrixConfig, host?: HTMLElement): Promise
   if (initPromise) return initPromise;
   if (window.__mtx) return Promise.resolve();
 
-  const generation = ++lifecycleGeneration;
-  const pending = initWidgetInternal(config, host, generation).finally(() => {
+  const pending = initWidgetInternal(openSession(), config, host).finally(() => {
     if (initPromise === pending) initPromise = null;
   });
   initPromise = pending;
@@ -146,14 +174,8 @@ export const initWidget = (config: MarketrixConfig, host?: HTMLElement): Promise
 };
 
 export const unmountWidget = (): void => {
-  lifecycleGeneration++;
-  void rrwebSessionRecorder?.stop();
-  rrwebSessionRecorder = null;
-  streamClient.disconnect();
-  stopScreenShare();
-  showModeService.cleanup();
-
-  active?.unmount();
+  session?.close();
+  session = null;
   active = null;
   initPromise = null;
   window.__mtx = undefined;
@@ -166,7 +188,7 @@ export const updateMarketrixConfig = async (newConfig: Partial<MarketrixConfig>)
   const { config, input, host } = active;
   unmountWidget();
   if (input) await initWidget({ ...input, ...newConfig }, host);
-  else mountActive({ ...config, ...newConfig }, host);
+  else mountActive(openSession(), { ...config, ...newConfig }, host);
 };
 
 export const getCurrentConfig = (): ValidWidgetConfig | null => active?.config ?? null;
