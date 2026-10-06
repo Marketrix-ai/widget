@@ -222,7 +222,11 @@ describe('commit skips the render for a transition that reports no change', () =
     const placeholderId = chat().messages.at(-1)?.id;
 
     act(() => {
-      asStreamClientInternals().handleMessage({ type: 'task/status', status: 'has_question' });
+      asStreamClientInternals().handleMessage({
+        type: 'task/status',
+        request_id: placeholderId,
+        status: 'has_question',
+      });
     });
     expect(
       ofKind(

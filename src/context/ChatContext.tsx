@@ -91,12 +91,10 @@ export const ChatProvider: React.FC<{ transport: ChatTransport; children: React.
 }) => {
   const config = useWidgetConfig();
   const { use_screenshare } = config;
-  const { uiState, uiActions } = useUIStateContext();
+  const { uiActions } = useUIStateContext();
   const [state, setState] = useState<ChatState>(() => ({ messages: [], task: { phase: 'idle' } }));
 
   const stateRef = useRef<ChatState>(state);
-  const currentModeRef = useRef(uiState.currentMode);
-  currentModeRef.current = uiState.currentMode;
 
   const commit = useCallback((transition: (s: ChatState) => ChatState) => {
     const prev = stateRef.current;
@@ -188,9 +186,9 @@ export const ChatProvider: React.FC<{ transport: ChatTransport; children: React.
         ? { status: 'completed' }
         : { status: 'failed', error: outcome.error };
 
-      commit(s => reduceToolProgress(s, call.browser_tool, progress, currentModeRef.current));
+      commit(s => reduceToolProgress(s, call.request_id, call.browser_tool, progress));
       if (outcome.success && call.browser_tool === 'done') {
-        commit(s => reduceToolDone(s, currentModeRef.current, call.args));
+        commit(s => reduceToolDone(s, call.request_id, call.args));
       }
 
       const tool_call_id = call.tool_call_id;
@@ -226,7 +224,7 @@ export const ChatProvider: React.FC<{ transport: ChatTransport; children: React.
       }
 
       const stopped = stateRef.current.task.phase === 'stopped';
-      commit(s => reduceEvent(s, event, currentModeRef.current));
+      commit(s => reduceEvent(s, event));
       if (event.type === 'tool/call' && !stopped) {
         startToolCall(event).catch(reportFailure('Something went wrong running that step. Please try again.'));
       }
@@ -240,15 +238,15 @@ export const ChatProvider: React.FC<{ transport: ChatTransport; children: React.
       offEvent();
       offState();
     };
-  }, [transport, commit, uiActions, currentModeRef]);
+  }, [transport, commit, uiActions]);
 
   const stopTask = useCallback(() => {
     showModeService.cleanup();
-    commit(s => reduceStop(s, currentModeRef.current));
+    commit(s => reduceStop(s));
     transport
       .send({ type: 'chat/stop' })
       .catch(uiActions.reportFailure('Could not stop the assistant — it may still be working.'));
-  }, [transport, commit, uiActions, currentModeRef]);
+  }, [transport, commit, uiActions]);
 
   const clearChat = useCallback(() => {
     const { task, messages } = stateRef.current;

@@ -21,11 +21,12 @@ type ToolAndArgs = WidgetToolCall extends infer Call
   : never;
 
 export function toolCall(
-  overrides: Partial<Pick<WidgetToolCall, 'tool_call_id' | 'mode' | 'explanation'>> = {},
+  overrides: Partial<Pick<WidgetToolCall, 'request_id' | 'tool_call_id' | 'mode' | 'explanation'>> = {},
   tool: ToolAndArgs = { browser_tool: 'click_element', args: { index: 1 } },
 ): WidgetToolCall {
   return {
     type: 'tool/call',
+    request_id: 'agent-1',
     tool_call_id: 'call-1',
     mode: 'do',
     explanation: 'Clicking the submit button',
