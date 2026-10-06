@@ -11,7 +11,7 @@ import { type Context, createContext, useContext, useMemo, useSyncExternalStore 
 import { useChatContext } from '../context/ChatContext';
 import { openScreenAccessRequest } from '../context/chatReducer';
 import { useUIStateContext } from '../context/UIStateContext';
-import { streamClient, streamNotice } from '../services/StreamClient';
+import { streamNotice } from '../services/StreamClient';
 import type { ValidWidgetConfig, WidgetState } from '../types';
 import { isPending } from '../utils/chat';
 
@@ -27,8 +27,8 @@ export const useWidgetConfig = () => useRequiredContext(WidgetConfigContext, 'Wi
 
 export const useWidget = () => {
   const { uiState, uiActions } = useUIStateContext();
-  const { messages, taskState, chatActions } = useChatContext();
-  const stream = useSyncExternalStore(streamClient.subscribe, streamClient.getState);
+  const { messages, taskState, chatActions, transport } = useChatContext();
+  const stream = useSyncExternalStore(transport.subscribe, transport.getState);
 
   const state = useMemo<WidgetState>(() => {
     const isAwaitingReply = messages.some(isPending);

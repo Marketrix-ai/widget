@@ -10,8 +10,7 @@ import { WidgetProviders } from '../../context/WidgetProviders';
 import * as chatThread from '../../services/chatThread';
 import { readChatSnapshot, writeChatSnapshot } from '../../services/StorageService';
 import { streamClient } from '../../services/StreamClient';
-import { getMockWidgetConfig } from '../../test/fixtures';
-import { openChatTab, openWidget, renderWidget } from '../../test/renderWidget';
+import { mockMount, openChatTab, openWidget, renderWidget } from '../../test/renderWidget';
 import { WidgetRoot } from '../WidgetRoot';
 
 describe('Widget smoke', () => {
@@ -61,13 +60,13 @@ describe('Widget smoke', () => {
     vi.spyOn(chatThread, 'getOrCreateChatId').mockResolvedValue('chat-greeting');
     vi.spyOn(streamClient, 'connect').mockResolvedValue();
     vi.useFakeTimers();
-    const config = getMockWidgetConfig({ isPreviewMode: false, widget_greeting: 'Hello there' });
+    const mount = mockMount(false, { widget_greeting: 'Hello there' });
     const tree = () => (
-      <WidgetProviders config={config}>
+      <WidgetProviders {...mount}>
         <WidgetRoot />
       </WidgetProviders>
     );
-    const { rerender } = renderWidget({ isPreviewMode: false, widget_greeting: 'Hello there' });
+    const { rerender } = renderWidget({ widget_greeting: 'Hello there' }, { previewMode: false });
     rerender(tree());
     await act(async () => vi.advanceTimersByTime(2000));
     expect(screen.queryAllByText('Hello there')).not.toHaveLength(0);

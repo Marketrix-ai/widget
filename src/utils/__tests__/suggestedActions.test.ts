@@ -48,12 +48,12 @@ describe('a suggested-action dispatch text matches its caption', () => {
 
 describe('a tenant with no configured chips', () => {
   it('sees none on a live page, never the built-in demo copy', () => {
-    expect(getSuggestedActionsFromConfig(getMockWidgetConfig({ isPreviewMode: false, widget_chips: [] }))).toEqual([]);
+    expect(getSuggestedActionsFromConfig(getMockWidgetConfig({ placement: 'floating', widget_chips: [] }))).toEqual([]);
   });
 
   it('sees the demo chips only in the settings preview', () => {
-    expect(getSuggestedActionsFromConfig(getMockWidgetConfig({ isPreviewMode: true, widget_chips: [] })).length).toBe(
-      5,
-    );
+    expect(
+      getSuggestedActionsFromConfig(getMockWidgetConfig({ placement: 'contained', widget_chips: [] })).length,
+    ).toBe(5);
   });
 });

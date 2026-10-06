@@ -38,6 +38,7 @@ afterEach(() => {
 describe('public widget lifecycle', () => {
   it('disconnects the stream on public unmount', async () => {
     vi.spyOn(WidgetService, 'loadWidgetConfig').mockResolvedValue(credentialedConfig());
+    vi.spyOn(chatThread, 'getOrCreateChatId').mockResolvedValue('chat-unmount-1');
     vi.spyOn(streamClient, 'connect').mockResolvedValue();
     const disconnect = vi.spyOn(streamClient, 'disconnect');
     await act(() => initWidget({ mtxId: 'unmount-1', mtxKey: 'key', mtxApiHost: 'https://api.test' }, mountTarget()));
@@ -283,7 +284,7 @@ describe('public widget lifecycle', () => {
     render(<MarketrixWidgetPreview settings={validSettings()} container={preview} />);
     await waitFor(() => expect(preview.querySelector('.marketrix-widget-container')).toBeTruthy());
 
-    expect(getCurrentConfig()).toMatchObject({ mtxId: 'prod-id', isPreviewMode: false });
+    expect(getCurrentConfig()).toMatchObject({ mtxId: 'prod-id', placement: 'floating' });
   });
 
   it('with no container prop, mounts into its own rendered div rather than beside it', async () => {

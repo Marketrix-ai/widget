@@ -65,7 +65,7 @@ const ChatContextSchema = z.strictObject({
 
 type ChatContext = z.infer<typeof ChatContextSchema>;
 
-interface ChatSnapshot {
+export interface ChatSnapshot {
   messages: ChatMessage[];
   currentMode: InstructionType;
   isOpen: boolean;

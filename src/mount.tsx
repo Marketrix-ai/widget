@@ -17,6 +17,7 @@ import { themeCssProperties } from './design-system/semantic-tokens';
 import shadowStyles from './index.css?inline';
 import { configureSdk } from './sdk';
 import { DEFAULT_WIDGET_SETTINGS } from './sdk/contracts/widgetSettings';
+import { type ChatTransport, createPreviewTransport, liveTransport } from './services/chatTransport';
 import { RrwebSessionRecorder } from './services/RrwebSessionRecorder';
 import { stopScreenShare } from './services/ScreenShareService';
 import { showModeService } from './services/ShowModeService';
@@ -79,7 +80,7 @@ const attachShadowMount = (container: HTMLElement, mountId: string, styleNonce?:
   return { shadowRoot, mountEl };
 };
 
-export function renderWidget(config: ValidWidgetConfig, host?: HTMLElement): () => void {
+export function renderWidget(config: ValidWidgetConfig, transport: ChatTransport, host?: HTMLElement): () => void {
   const container = document.createElement('div');
   container.className = WIDGET_SHADOW_HOST_CLASS;
   container.style.pointerEvents = 'auto';
@@ -94,7 +95,7 @@ export function renderWidget(config: ValidWidgetConfig, host?: HTMLElement): () 
   const root = createRoot(mountEl);
   root.render(
     <React.StrictMode>
-      <WidgetProviders config={config}>
+      <WidgetProviders config={config} transport={transport}>
         <WidgetRoot />
       </WidgetProviders>
     </React.StrictMode>,
@@ -108,23 +109,24 @@ export function renderWidget(config: ValidWidgetConfig, host?: HTMLElement): () 
 function mountActive(
   owner: WidgetSession,
   config: ValidWidgetConfig,
+  transport: ChatTransport,
   host: HTMLElement | undefined,
   input?: MarketrixConfig,
 ): void {
   active = { config, input, host };
-  owner.own(renderWidget(config, host));
+  owner.own(renderWidget(config, transport, host));
   owner.own(stopScreenShare);
   owner.own(() => showModeService.cleanup());
   window.__mtx = { state: 'active' };
 }
 
 export function previewConfig(settings: WidgetSettingsData, baseConfig: ClientOwnedConfig = {}): ValidWidgetConfig {
-  return { ...baseConfig, ...parseWidgetSettingsOrThrow(settings), isPreviewMode: true };
+  return { ...baseConfig, ...parseWidgetSettingsOrThrow(settings), placement: 'contained' };
 }
 
 export function mountPreview(config: ValidWidgetConfig, host: HTMLElement | undefined): void {
   unmountWidget();
-  mountActive(openSession(), config, host);
+  mountActive(openSession(), config, createPreviewTransport(), host);
 }
 
 async function initWidgetInternal(owner: WidgetSession, config: MarketrixConfig, host: HTMLElement | undefined) {
@@ -153,7 +155,7 @@ async function initWidgetInternal(owner: WidgetSession, config: MarketrixConfig,
   scopeStorageTo(finalConfig);
   streamClient.setCredentials({ marketrix_id: finalConfig.mtxId, marketrix_key: finalConfig.mtxKey });
   owner.own(() => streamClient.disconnect());
-  mountActive(owner, finalConfig, host, config);
+  mountActive(owner, finalConfig, liveTransport, host, config);
 
   if (finalConfig.widget_recording) {
     const recorder = new RrwebSessionRecorder();
@@ -188,7 +190,7 @@ export const updateMarketrixConfig = async (newConfig: Partial<MarketrixConfig>)
   const { config, input, host } = active;
   unmountWidget();
   if (input) await initWidget({ ...input, ...newConfig }, host);
-  else mountActive(openSession(), { ...config, ...newConfig }, host);
+  else mountActive(openSession(), { ...config, ...newConfig }, createPreviewTransport(), host);
 };
 
 export const getCurrentConfig = (): ValidWidgetConfig | null => active?.config ?? null;

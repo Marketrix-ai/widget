@@ -10,6 +10,7 @@ import { resolve } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'bun:test';
 
 import * as Mount from '../mount';
+import { createPreviewTransport } from '../services/chatTransport';
 import * as WidgetService from '../services/WidgetService';
 import { freshCopyOf, getMockWidgetConfig } from '../test/fixtures';
 
@@ -162,11 +163,11 @@ describe('widget public entry paths', () => {
     document.body.appendChild(parent);
 
     const first = await importMount();
-    first.renderWidget(getMockWidgetConfig(), parent);
-    first.renderWidget(getMockWidgetConfig(), parent);
+    first.renderWidget(getMockWidgetConfig(), createPreviewTransport(), parent);
+    first.renderWidget(getMockWidgetConfig(), createPreviewTransport(), parent);
 
     const reExecuted = await importMount();
-    reExecuted.renderWidget(getMockWidgetConfig(), parent);
+    reExecuted.renderWidget(getMockWidgetConfig(), createPreviewTransport(), parent);
 
     expect(parent.querySelectorAll('.marketrix-widget-container')).toHaveLength(3);
   });
@@ -175,7 +176,7 @@ describe('widget public entry paths', () => {
     const { renderWidget } = await importMount();
     const shadowAt = spyShadowRoots();
 
-    renderWidget(getMockWidgetConfig());
+    renderWidget(getMockWidgetConfig(), createPreviewTransport());
 
     const styles = shadowAt(0).querySelectorAll('style');
     expect(styles).toHaveLength(1);
@@ -187,8 +188,8 @@ describe('widget public entry paths', () => {
     const { renderWidget } = await importMount();
     const shadowAt = spyShadowRoots();
 
-    renderWidget(getMockWidgetConfig());
-    renderWidget(getMockWidgetConfig({ styleNonce: 'csp-nonce-123' }));
+    renderWidget(getMockWidgetConfig(), createPreviewTransport());
+    renderWidget(getMockWidgetConfig({ styleNonce: 'csp-nonce-123' }), createPreviewTransport());
 
     const [bare, nonced] = [0, 1].map(n => shadowAt(n).querySelector('style')?.nonce);
     expect(bare).toBe('');

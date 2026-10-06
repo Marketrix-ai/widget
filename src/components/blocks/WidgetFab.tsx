@@ -29,7 +29,8 @@ const VELOCITY_SAMPLE_INTERVAL_MS = 10;
 const VELOCITY_HISTORY_SIZE = 6;
 
 function useDragSnap(onPositionCommit: (position: WidgetPosition) => void) {
-  const { isPreviewMode, widget_position: position } = useWidgetConfig();
+  const { placement, widget_position: position } = useWidgetConfig();
+  const contained = placement === 'contained';
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const abandonSnapRef = useRef<(() => void) | null>(null);
@@ -62,11 +63,11 @@ function useDragSnap(onPositionCommit: (position: WidgetPosition) => void) {
   const [, setViewportTick] = useState(0);
 
   useEffect(() => {
-    if (isPreviewMode) return;
+    if (contained) return;
     const onResize = () => setViewportTick(t => t + 1);
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
-  }, [isPreviewMode]);
+  }, [contained]);
 
   const measureWrapper = useCallback(() => {
     if (!wrapperRef.current) return;
@@ -87,7 +88,7 @@ function useDragSnap(onPositionCommit: (position: WidgetPosition) => void) {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   const anchorOf = (corner: WidgetPosition) => getAnchorTopLeft(corner, vw, vh, wrapperSize.w, wrapperSize.h);
-  const pixelPositioned = !isPreviewMode && vw > 0 && vh > 0;
+  const pixelPositioned = !contained && vw > 0 && vh > 0;
   const anchor = anchorOf(position);
   const pixelPositionStyle = pixelPositioned ? { left: anchor.x, top: anchor.y } : undefined;
 
@@ -110,7 +111,7 @@ function useDragSnap(onPositionCommit: (position: WidgetPosition) => void) {
   };
 
   const onPointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
-    if (isPreviewMode) return;
+    if (contained) return;
     dragRef.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
@@ -219,7 +220,7 @@ interface WidgetFabProps {
 
 export const WidgetFab: React.FC<WidgetFabProps> = ({ onPositionCommit }) => {
   const {
-    isPreviewMode,
+    placement,
     widget_accent_color: accentColor,
     widget_background_color: backgroundColor,
     widget_position: position,
@@ -241,7 +242,7 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onPositionCommit }) => {
       ref={wrapperRef}
       className='mtx-fab-anchor'
       data-animated={isDragging ? 'false' : 'true'}
-      data-preview={isPreviewMode ? 'true' : 'false'}
+      data-placement={placement}
       style={{
         zIndex,
         pointerEvents: open ? 'none' : 'auto',

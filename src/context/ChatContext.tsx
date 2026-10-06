@@ -1,10 +1,11 @@
 /**
- * React context owning the widget's chat store and its live wiring, reached through `useChatContext`.
+ * React context owning the widget's chat store and its wiring to the injected `ChatTransport`, reached through
+ * `useChatContext`.
  * `sendTurn` is the one entry for a typed turn or chip, refusing a mode the tenant disabled or a turn while a
  * screen-access request is open, and asking for screen access first in Show and Do; `allowScreenAccess`/
  * `denyScreenAccess` release the held turn; `stopTask` cancels a running turn and its Show overlay; `clearChat`
  * stops any running turn, clears the error and starts a fresh chat thread, so the agent forgets the cleared
- * history too. The stream handlers run browser tools and reply with results; preview mode answers locally.
+ * history too. The transport's event handlers run browser tools and reply with results.
  * A turn the api refuses as forbidden (a mode switched off since the page loaded) shows the api's own message.
  */
 import { ORPCError } from '@orpc/client';
@@ -13,15 +14,14 @@ import React, { createContext, useCallback, useEffect, useMemo, useRef, useState
 import { useRequiredContext, useWidgetConfig } from '../hooks/useWidget';
 import type { WidgetEvent } from '../sdk';
 import { executeTool, type WidgetToolCall } from '../services/browserTools';
-import { getOrCreateChatId } from '../services/chatThread';
+import type { ChatTransport } from '../services/chatTransport';
 import { activeScreenStream, startScreenShare, subscribeScreenShare } from '../services/ScreenShareService';
 import { showModeService } from '../services/ShowModeService';
-import { claimToolCall, forgetChatId } from '../services/StorageService';
-import { GAVE_UP_TEXT, streamClient } from '../services/StreamClient';
+import { claimToolCall } from '../services/StorageService';
+import { GAVE_UP_TEXT } from '../services/StreamClient';
 import type { ChatMessage, InstructionType } from '../types';
 import {
   CHAT_FAILURE_TEXT,
-  createAgentMessage,
   createPlaceholderMessage,
   createScreenAccessRequestMessage,
   createSystemMessage,
@@ -64,6 +64,7 @@ interface ChatContextType {
   messages: ChatMessage[];
   taskState: TaskState;
   chatActions: ChatActions;
+  transport: ChatTransport;
 }
 
 const ChatContext = createContext<ChatContextType | null>(null);
@@ -71,7 +72,6 @@ const ChatContext = createContext<ChatContextType | null>(null);
 const STALE_REPLY_TIMEOUT_MS = 120_000;
 const STALE_REPLY_TEXT = 'This is taking longer than expected. Please try again.';
 const SCREEN_SHARE_FAILED_TEXT = 'Screen sharing could not start, so the assistant will continue without it.';
-const PREVIEW_REPLY = "This is a preview. In production, I'll respond to your messages here.";
 
 const StaleReplyWatchdog: React.FC<{ id: string; progress: number; onStale: (id: string) => void }> = ({
   id,
@@ -85,9 +85,12 @@ const StaleReplyWatchdog: React.FC<{ id: string; progress: number; onStale: (id:
   return null;
 };
 
-export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const ChatProvider: React.FC<{ transport: ChatTransport; children: React.ReactNode }> = ({
+  transport,
+  children,
+}) => {
   const config = useWidgetConfig();
-  const { isPreviewMode, use_screenshare } = config;
+  const { use_screenshare } = config;
   const { uiState, uiActions } = useUIStateContext();
   const [state, setState] = useState<ChatState>(() => ({ messages: [], task: { phase: 'idle' } }));
 
@@ -112,17 +115,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const dispatchTurn = useCallback(
     async (content: string, mode: InstructionType): Promise<boolean> => {
-      if (isPreviewMode) {
-        commit(s => reduceAppend(s, createAgentMessage(PREVIEW_REPLY)));
-        return true;
-      }
-
       const placeholder = createPlaceholderMessage(mode);
       commit(s => reduceDispatch(s, placeholder));
       try {
-        const chatId = await getOrCreateChatId();
-        await streamClient.ready(chatId);
-        await streamClient.send({ type: `chat/${mode}`, request_id: placeholder.id, content });
+        await transport.ready();
+        await transport.send({ type: `chat/${mode}`, request_id: placeholder.id, content });
         return true;
       } catch (error) {
         const refused = error instanceof ORPCError && error.code === 'FORBIDDEN';
@@ -132,7 +129,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
     },
-    [isPreviewMode, commit],
+    [transport, commit],
   );
 
   const sendTurn = useCallback(
@@ -181,11 +178,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [commit]);
 
   useEffect(() => {
-    if (isPreviewMode) return;
     const { reportFailure } = uiActions;
 
     const startToolCall = async (call: WidgetToolCall) => {
-      const route = streamClient.route();
+      const route = transport.route();
       const outcome = await executeTool(call.browser_tool, call.args, call.mode, call.explanation);
       if (!outcome.success && outcome.cancelled) return;
       const progress: ToolProgress = outcome.success
@@ -198,7 +194,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       const tool_call_id = call.tool_call_id;
-      await streamClient
+      await transport
         .send(
           outcome.success
             ? { type: 'tool/response', tool_call_id, success: true, result: outcome.result }
@@ -215,7 +211,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const claim = claimToolCall(event.tool_call_id);
         if (claim === 'seen') return;
         if (claim === 'interrupted') {
-          streamClient
+          transport
             .send({
               type: 'tool/response',
               tool_call_id: event.tool_call_id,
@@ -236,36 +232,31 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     };
 
-    const offEvent = streamClient.onEvent(onMessage);
-    const offState = streamClient.subscribe(stream => {
+    const offEvent = transport.onEvent(onMessage);
+    const offState = transport.subscribe(stream => {
       if (stream.phase === 'gaveUp') commit(s => reduceTransportFailure(s, GAVE_UP_TEXT[stream.reason]));
     });
     return () => {
       offEvent();
       offState();
     };
-  }, [isPreviewMode, commit, uiActions, currentModeRef]);
+  }, [transport, commit, uiActions, currentModeRef]);
 
   const stopTask = useCallback(() => {
     showModeService.cleanup();
     commit(s => reduceStop(s, currentModeRef.current));
-    if (isPreviewMode) return;
-    streamClient
+    transport
       .send({ type: 'chat/stop' })
       .catch(uiActions.reportFailure('Could not stop the assistant — it may still be working.'));
-  }, [isPreviewMode, commit, uiActions, currentModeRef]);
+  }, [transport, commit, uiActions, currentModeRef]);
 
   const clearChat = useCallback(() => {
     const { task, messages } = stateRef.current;
     if (task.phase === 'running' || messages.some(isPending)) stopTask();
     commit(() => ({ messages: [], task: { phase: 'idle' } }));
     uiActions.setError(undefined);
-    if (isPreviewMode) return;
-    forgetChatId();
-    getOrCreateChatId()
-      .then(chatId => streamClient.connect(chatId))
-      .catch(uiActions.reportFailure('Could not start a new chat. Please refresh the page.'));
-  }, [isPreviewMode, commit, stopTask, uiActions]);
+    transport.restart().catch(uiActions.reportFailure('Could not start a new chat. Please refresh the page.'));
+  }, [transport, commit, stopTask, uiActions]);
 
   const chatActions = useMemo<ChatActions>(
     () => ({ restoreMessages, addSystemMessage, clearChat, sendTurn, allowScreenAccess, denyScreenAccess, stopTask }),
@@ -273,8 +264,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 
   const contextValue = useMemo<ChatContextType>(
-    () => ({ messages: state.messages, taskState: state.task, chatActions }),
-    [state.messages, state.task, chatActions],
+    () => ({ messages: state.messages, taskState: state.task, chatActions, transport }),
+    [state.messages, state.task, chatActions, transport],
   );
 
   return (

@@ -7,7 +7,7 @@ import { describe, expect, it } from 'bun:test';
 import { useRef, useState } from 'react';
 
 import { PortalContainerContext, WidgetProviders } from '../../../context/WidgetProviders';
-import { getMockWidgetConfig } from '../../../test/fixtures';
+import { mockMount } from '../../../test/renderWidget';
 import { SCREEN_ACCESS_DETAIL, SCREEN_ACCESS_PROMPT } from '../../../utils/chat';
 import { ScreenAccessDialog } from '../ScreenAccessDialog';
 
@@ -55,7 +55,7 @@ describe('ScreenAccessDialog', () => {
     const widgetRoot = shadowRoot.appendChild(document.createElement('div'));
 
     render(
-      <WidgetProviders config={getMockWidgetConfig()}>
+      <WidgetProviders {...mockMount(true)}>
         <PortalContainerContext value={widgetRoot}>
           <ScreenAccessDialog onClose={() => undefined} onConfirm={() => undefined} finalFocusRef={{ current: null }} />
         </PortalContainerContext>

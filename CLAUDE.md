@@ -100,6 +100,9 @@ each a Zod union discriminated on `type`.
 
 ## Init & isolation
 
+- **A preview is not a flag.** Whoever mounts injects a `ChatTransport` (`liveTransport` or
+  `createPreviewTransport()`) and sets `placement` (`floating | contained`); chat code talks only to the
+  transport and layout reads only `placement`.
 - `window.__mtx.state` (`initializing | active`) is the singleton guard across module re-execution;
   `initPromise` coalesces concurrent `initWidget` calls.
 - **The API host is not an env var** — it is the required per-init `mtxApiHost` / `mtx-api-host`. An init
