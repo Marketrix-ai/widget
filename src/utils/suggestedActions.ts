@@ -27,7 +27,8 @@ const PREVIEW_CHIPS: SuggestedActionItem[] = [
 export function getSuggestedActionsFromConfig(config: ValidWidgetConfig): SuggestedActionItem[] {
   const modes = enabledModes(config);
   const chips = config.widget_chips;
-  if (!chips.length) return config.isPreviewMode ? PREVIEW_CHIPS.filter(chip => modes.includes(chip.type)) : [];
+  if (!chips.length)
+    return config.placement === 'contained' ? PREVIEW_CHIPS.filter(chip => modes.includes(chip.type)) : [];
 
   return chips.flatMap((chip, index) =>
     modes.includes(chip.chip_mode)

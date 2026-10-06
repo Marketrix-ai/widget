@@ -11,11 +11,12 @@ import { useWidget } from '../../hooks/useWidget';
 import * as chatThread from '../../services/chatThread';
 import * as StorageService from '../../services/StorageService';
 import { streamClient } from '../../services/StreamClient';
-import { agentMessage, flushMicrotasks, getMockWidgetConfig } from '../../test/fixtures';
+import { agentMessage, flushMicrotasks } from '../../test/fixtures';
+import { mockMount } from '../../test/renderWidget';
 import { useUIStateContext } from '../UIStateContext';
 import { WidgetProviders } from '../WidgetProviders';
 
-const LIVE = getMockWidgetConfig({ isPreviewMode: false });
+const LIVE = mockMount(false);
 
 const ErrorProbe = () => {
   const { uiState } = useUIStateContext();
@@ -40,7 +41,7 @@ describe('WidgetProviders initialization', () => {
 
     const view = render(
       <React.StrictMode>
-        <WidgetProviders config={LIVE}>
+        <WidgetProviders {...LIVE}>
           <div />
         </WidgetProviders>
       </React.StrictMode>,
@@ -69,7 +70,7 @@ describe('WidgetProviders initialization', () => {
     const connect = vi.spyOn(streamClient, 'connect').mockResolvedValue();
 
     const first = render(
-      <WidgetProviders config={LIVE}>
+      <WidgetProviders {...LIVE}>
         <div />
       </WidgetProviders>,
     );
@@ -77,7 +78,7 @@ describe('WidgetProviders initialization', () => {
     first.unmount();
 
     render(
-      <WidgetProviders config={LIVE}>
+      <WidgetProviders {...LIVE}>
         <div />
       </WidgetProviders>,
     );
@@ -92,7 +93,7 @@ describe('WidgetProviders initialization', () => {
     vi.spyOn(StorageService, 'readChatSnapshot').mockReturnValue(onDisk);
 
     render(
-      <WidgetProviders config={LIVE}>
+      <WidgetProviders {...LIVE}>
         <TaskProbe />
       </WidgetProviders>,
     );
@@ -116,7 +117,7 @@ describe('WidgetProviders initialization', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
     render(
-      <WidgetProviders config={LIVE}>
+      <WidgetProviders {...LIVE}>
         <ErrorProbe />
       </WidgetProviders>,
     );

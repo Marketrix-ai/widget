@@ -138,6 +138,6 @@ describe('loadWidgetConfig', () => {
     });
 
     expect(widgetPublicSearch).toHaveBeenCalledTimes(2);
-    expect(config).toMatchObject({ mtxId: 'retry-after-failure', isPreviewMode: false });
+    expect(config).toMatchObject({ mtxId: 'retry-after-failure', placement: 'floating' });
   });
 });

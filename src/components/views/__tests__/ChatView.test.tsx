@@ -44,13 +44,13 @@ describe('a send that is waiting on screen access', () => {
     expect(screen.getByText('first message', { ignore: 'textarea' })).toBeInTheDocument();
   });
 
-  it('unlocks once the request is answered, and delivers the queued message', () => {
+  it('unlocks once the request is answered, and delivers the queued message', async () => {
     const composer = openChat('Show');
     send(composer, 'first message');
 
     fireEvent.click(screen.getByRole('button', { name: 'No' }));
 
-    expect(composer.disabled).toBe(false);
+    await waitFor(() => expect(composer.disabled).toBe(false));
     expect(screen.getByText('No')).toBeInTheDocument();
   });
 });

@@ -3,7 +3,7 @@
  * z-index floor, publishes the portal root, and renders the panel, launcher, notifications and busy glow.
  * A panel that crashes while rendering is reported through the error toast rather than vanishing.
  * A tenant's z-index setting can never sink the widget below the host page's own stacking context, and
- * preview mode always renders even when a setting would hide the widget.
+ * a contained widget always renders even when a setting would hide the floating one.
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -58,9 +58,9 @@ export const WidgetRoot: React.FC = () => {
   const [showGreeting, setShowGreeting] = useState(false);
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
   const { state, actions } = useWidget();
-  const { isPreviewMode } = config;
+  const contained = config.placement === 'contained';
 
-  const hidden = !isPreviewMode && (config.show_widget === false || config.widget_appearance === 'hidden');
+  const hidden = !contained && (config.show_widget === false || config.widget_appearance === 'hidden');
 
   useScrollLock(state.isOpen && !hidden);
 
@@ -68,18 +68,18 @@ export const WidgetRoot: React.FC = () => {
 
   const [widgetPosition, setWidgetPosition] = useState<WidgetPosition>(
     () =>
-      (!isPreviewMode && readLocalParsed(positionStorageKey, WidgetSettingsDataSchema.shape.widget_position)) ||
+      (!contained && readLocalParsed(positionStorageKey, WidgetSettingsDataSchema.shape.widget_position)) ||
       config.widget_position,
   );
 
   useEffect(() => {
-    if (state.isOpen || isPreviewMode || !config.widget_greeting_toast) {
+    if (state.isOpen || contained || !config.widget_greeting_toast) {
       setShowGreeting(false);
       return;
     }
     const timer = setTimeout(() => setShowGreeting(true), 2000);
     return () => clearTimeout(timer);
-  }, [state.isOpen, isPreviewMode, config.widget_greeting_toast]);
+  }, [state.isOpen, contained, config.widget_greeting_toast]);
 
   const effectiveConfig = useMemo(
     () => ({
@@ -99,7 +99,7 @@ export const WidgetRoot: React.FC = () => {
 
   const handlePositionChange = (position: WidgetPosition) => {
     setWidgetPosition(position);
-    if (!isPreviewMode) writeLocal(positionStorageKey, position);
+    if (!contained) writeLocal(positionStorageKey, position);
   };
 
   if (hidden) return null;
@@ -112,7 +112,7 @@ export const WidgetRoot: React.FC = () => {
         ref={setPortalContainer}
         data-marketrix-widget
         position='relative'
-        style={{ ...themeCssProperties(config), ...(isPreviewMode && { width: '100%', height: '100%' }) }}
+        style={{ ...themeCssProperties(config), ...(contained && { width: '100%', height: '100%' }) }}
       >
         <PortalContainerContext value={portalContainer}>
           <NotificationProvider

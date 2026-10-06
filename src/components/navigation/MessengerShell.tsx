@@ -213,7 +213,7 @@ export const MessengerShell: React.FC = () => {
   const config = useWidgetConfig();
   const { state, actions } = useWidget();
   const { isOpen, activeView } = state;
-  const { isPreviewMode } = config;
+  const contained = config.placement === 'contained';
 
   const { dimensions, grip, onResizeStart, onResizeKeyDown, containerRef } = useResize();
 
@@ -243,7 +243,7 @@ export const MessengerShell: React.FC = () => {
   return (
     <Stack
       ref={containerRef}
-      position={isPreviewMode ? 'absolute' : 'fixed'}
+      position={contained ? 'absolute' : 'fixed'}
       rounded='lg'
       border
       overflow='hidden'
@@ -315,7 +315,7 @@ export const MessengerShell: React.FC = () => {
         <ShellTabBar />
       </Tabs.Root>
 
-      {!isPreviewMode && (
+      {!contained && (
         <div
           role='separator'
           aria-label={`Resize widget from ${grip.vertical} ${grip.horizontal}. Use arrow keys to resize.`}

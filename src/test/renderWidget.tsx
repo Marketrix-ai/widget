@@ -6,26 +6,35 @@
  * launcher, then the resize grip.
  * `ChatHarness` mounts just the chat store under a mock config, and `renderChatHarness` mounts it and
  * returns a getter for the live chat context.
- * `previewMode` defaults true, so a mounted widget neither mints a chat id nor dials the stream.
+ * `previewMode` defaults true, mounting a contained widget on a preview transport that neither mints a chat id nor
+ * dials the stream; `mockMount` builds that config and transport pair.
  */
 import { fireEvent, render, screen } from '@testing-library/react';
-import type React from 'react';
+import React from 'react';
 
 import { WidgetRoot } from '../components/WidgetRoot';
 import { ChatProvider, useChatContext } from '../context/ChatContext';
 import { UIStateProvider } from '../context/UIStateContext';
 import { WidgetProviders } from '../context/WidgetProviders';
 import { WidgetConfigContext } from '../hooks/useWidget';
+import { createPreviewTransport, liveTransport } from '../services/chatTransport';
 import { $, getMockWidgetConfig } from './fixtures';
 
 type ChatContextValue = ReturnType<typeof useChatContext>;
+
+export function mockMount(previewMode: boolean, overrides: Parameters<typeof getMockWidgetConfig>[0] = {}) {
+  return {
+    config: getMockWidgetConfig({ placement: previewMode ? 'contained' : 'floating', ...overrides }),
+    transport: previewMode ? createPreviewTransport() : liveTransport,
+  };
+}
 
 export function renderWidget(
   overrides: Parameters<typeof getMockWidgetConfig>[0] = {},
   { previewMode = true }: { previewMode?: boolean } = {},
 ) {
   return render(
-    <WidgetProviders config={getMockWidgetConfig({ isPreviewMode: previewMode, ...overrides })}>
+    <WidgetProviders {...mockMount(previewMode, overrides)}>
       <WidgetRoot />
     </WidgetProviders>,
   );
@@ -66,13 +75,16 @@ export const ChatHarness: React.FC<ChatHarnessProps & { children: React.ReactNod
   previewMode = true,
   overrides = {},
   children,
-}) => (
-  <WidgetConfigContext value={getMockWidgetConfig({ isPreviewMode: previewMode, ...overrides })}>
-    <UIStateProvider>
-      <ChatProvider>{children}</ChatProvider>
-    </UIStateProvider>
-  </WidgetConfigContext>
-);
+}) => {
+  const [{ config, transport }] = React.useState(() => mockMount(previewMode, overrides));
+  return (
+    <WidgetConfigContext value={config}>
+      <UIStateProvider>
+        <ChatProvider transport={transport}>{children}</ChatProvider>
+      </UIStateProvider>
+    </WidgetConfigContext>
+  );
+};
 
 export function renderChatHarness(
   props: ChatHarnessProps = {},

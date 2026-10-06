@@ -111,7 +111,7 @@ export function getMockWidgetConfig(overrides: Partial<MockWidgetConfig> = {}): 
     widget_position_z_index: 1230,
     mtxId: 'test-id',
     mtxKey: 'test-key',
-    isPreviewMode: true,
+    placement: 'contained',
     ...overrides,
   };
 }
@@ -125,7 +125,7 @@ export function credentialedConfig(overrides: Partial<CredentialedConfig> = {}):
     ...validSettings(),
     mtxId: 'test-id',
     mtxKey: 'test-key',
-    isPreviewMode: false,
+    placement: 'floating',
     ...overrides,
   };
 }

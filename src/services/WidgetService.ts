@@ -63,5 +63,5 @@ export async function loadWidgetConfig(config: MarketrixConfig): Promise<Credent
     lookup.catch(() => widgetLookupCache.delete(cacheKey));
   }
 
-  return { ...config, ...(await lookup), isPreviewMode: false };
+  return { ...config, ...(await lookup), placement: 'floating' };
 }

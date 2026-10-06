@@ -395,7 +395,7 @@
   position: fixed;
 }
 
-.mtx-fab-anchor[data-preview='true'] {
+.mtx-fab-anchor[data-placement='contained'] {
   position: absolute;
 }
 

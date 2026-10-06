@@ -21,7 +21,7 @@ export interface ClientOwnedConfig {
 export type MarketrixConfig = ClientOwnedConfig & { mtxId: string; mtxKey: string; mtxApiHost: string };
 
 export type ValidWidgetConfig = WidgetRenderedSettings &
-  ClientOwnedConfig & { mtxId?: string; mtxKey?: string; isPreviewMode: boolean };
+  ClientOwnedConfig & { mtxId?: string; mtxKey?: string; placement: 'floating' | 'contained' };
 
 type ScreenshareMessage = Omit<Extract<StoredMessage, { kind: 'system' }>, 'kind'> & {
   kind: 'screenshare';

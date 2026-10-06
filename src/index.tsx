@@ -16,6 +16,7 @@ import {
   unmountWidget,
   updateMarketrixConfig,
 } from './mount';
+import { createPreviewTransport } from './services/chatTransport';
 import type { AddWidgetConfig, MarketrixWidgetPreviewProps } from './types';
 
 export const MarketrixWidgetPreview: React.FC<MarketrixWidgetPreviewProps> = ({ settings, container }) => {
@@ -23,7 +24,10 @@ export const MarketrixWidgetPreview: React.FC<MarketrixWidgetPreviewProps> = ({ 
 
   const config = useMemo(() => previewConfig(settings), [settings]);
 
-  useEffect(() => renderWidget(config, container ?? containerRef.current ?? document.body), [config, container]);
+  useEffect(
+    () => renderWidget(config, createPreviewTransport(), container ?? containerRef.current ?? document.body),
+    [config, container],
+  );
 
   if (container) return null;
   return <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative' }} />;

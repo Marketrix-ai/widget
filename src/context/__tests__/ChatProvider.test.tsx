@@ -13,6 +13,7 @@ import { Profiler, useEffect } from 'react';
 import { useWidget } from '../../hooks/useWidget';
 import type { executeTool } from '../../services/browserTools';
 import * as chatThread from '../../services/chatThread';
+import { PREVIEW_REPLY } from '../../services/chatTransport';
 import { claimTabId, remintTabId } from '../../services/StorageService';
 import { streamClient } from '../../services/StreamClient';
 import { agentMessage, asStreamClientInternals, ofKind, toolCall } from '../../test/fixtures';
@@ -294,6 +295,23 @@ describe('a real turn', () => {
     const placeholder = chat().messages.find(isPending);
     expect(order).toEqual(['ready', 'send']);
     expect(send).toHaveBeenCalledWith({ type: 'chat/tell', request_id: placeholder?.id, content: 'hello' });
+  });
+});
+
+describe('a preview turn', () => {
+  it('settles with the canned reply on the preview transport, never touching the stream', async () => {
+    const chat = renderCaptured(true);
+    const ready = vi.spyOn(streamClient, 'ready');
+    const send = vi.spyOn(streamClient, 'send');
+
+    await act(async () => {
+      await chat().chatActions.sendTurn('hello', 'tell');
+    });
+
+    await waitFor(() => expect(chat().messages.some(isPending)).toBe(false));
+    expect(messageText(chat().messages.at(-1)?.parts ?? [])).toBe(PREVIEW_REPLY);
+    expect(ready).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
   });
 });
 
