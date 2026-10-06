@@ -77,6 +77,7 @@ type WidgetToolName = (typeof WIDGET_TOOL_NAMES)[number];
 const widgetToolCall = <Name extends WidgetToolName>(browserTool: Name) =>
   z.strictObject({
     type: z.literal('tool/call'),
+    request_id: z.string().optional(),
     tool_call_id: z.string(),
     browser_tool: z.literal(browserTool),
     args: WidgetToolArgsSchemas[browserTool],
@@ -116,6 +117,7 @@ export const WidgetEventSchema = z.union([
   }),
   z.strictObject({
     type: z.literal('task/status'),
+    request_id: z.string().optional(),
     status: SimulationStatusSchema.exclude(['queued']),
     message: z.string().optional(),
   }),
