@@ -11,13 +11,14 @@ import { act, fireEvent, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import { initWidget, unmountWidget } from '../index';
+import { mountPreview, previewConfig } from '../mount';
 import type { WidgetClient } from '../sdk';
 import * as chatThread from '../services/chatThread';
 import { showModeService } from '../services/ShowModeService';
 import { writeChatSnapshot } from '../services/StorageService';
 import { streamClient } from '../services/StreamClient';
 import * as WidgetService from '../services/WidgetService';
-import { $, asStreamClientInternals, credentialedConfig } from '../test/fixtures';
+import { $, asStreamClientInternals, credentialedConfig, validSettings } from '../test/fixtures';
 import { dragFabAndResize, renderWidget } from '../test/renderWidget';
 import { mockSdk } from '../test/vi-compat';
 
@@ -178,6 +179,7 @@ describe('unmountWidget releases the show-mode overlay it does not own via the R
   });
 
   const activateShowModeOverlay = (): Registry => {
+    act(() => mountPreview(previewConfig(validSettings()), undefined));
     const registry = installRegistry();
     const target = document.createElement('button');
     target.scrollIntoView = () => {};

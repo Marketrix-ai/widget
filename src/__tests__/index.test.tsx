@@ -36,20 +36,32 @@ afterEach(() => {
 });
 
 describe('public widget lifecycle', () => {
-  it('disconnects the stream on public unmount', () => {
+  it('disconnects the stream on public unmount', async () => {
+    vi.spyOn(WidgetService, 'loadWidgetConfig').mockResolvedValue(credentialedConfig());
+    vi.spyOn(streamClient, 'connect').mockResolvedValue();
     const disconnect = vi.spyOn(streamClient, 'disconnect');
+    await act(() => initWidget({ mtxId: 'unmount-1', mtxKey: 'key', mtxApiHost: 'https://api.test' }, mountTarget()));
 
-    unmountWidget();
+    act(() => unmountWidget());
 
     expect(disconnect).toHaveBeenCalledTimes(1);
   });
 
-  it('ends an in-flight screen share on public unmount', () => {
+  it('ends an in-flight screen share on public unmount', async () => {
     const stopScreenShare = vi.spyOn(ScreenShareService, 'stopScreenShare');
+    await act(() => mountWidget({ settings: validSettings(), container: mountTarget() }));
+
+    act(() => unmountWidget());
+
+    expect(stopScreenShare).toHaveBeenCalledTimes(1);
+  });
+
+  it('does nothing on an unmount with nothing mounted', () => {
+    const disconnect = vi.spyOn(streamClient, 'disconnect');
 
     unmountWidget();
 
-    expect(stopScreenShare).toHaveBeenCalledTimes(1);
+    expect(disconnect).not.toHaveBeenCalled();
   });
 
   it('mounts programmatic preview settings without an API fetch and owns its cleanup', async () => {
