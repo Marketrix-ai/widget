@@ -11,7 +11,7 @@
         script.src = './loader.js';
         script.setAttribute('mtx-id', params.get('mtx-id') || '');
         script.setAttribute('mtx-key', params.get('mtx-key') || '');
-        script.setAttribute('mtx-api-host', params.get('mtx-api-host') || 'https://api.marketrix.test');
+        script.setAttribute('mtx-api-host', params.get('mtx-api-host') || 'http://api.marketrix.localhost');
         document.head.appendChild(script);
       })();
     </script>
