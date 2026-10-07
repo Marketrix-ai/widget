@@ -1,9 +1,10 @@
 /**
  * The widget's one door to `localStorage` and `sessionStorage`: schema-checked reads, tenant-scoped keys, the
  * chat id and transcript snapshot, the tab id and started tool calls. Config and credentials are never
- * persisted, and a host page that denies storage falls back to memory. The tab id survives same-origin
- * navigations so the api keeps routing a Show/Do task's tool calls to this tab, and `claimToolCall` answers a
- * call resent after a reload `page_reloaded` rather than running it twice.
+ * persisted, and a host page that denies storage falls back to memory. Nothing is read until first use, so a host
+ * importing it during its server render touches no storage. The tab id survives same-origin navigations so the api
+ * keeps routing a Show/Do task's tool calls to this tab, and `claimToolCall` answers a call resent after a reload
+ * `page_reloaded` rather than running it twice.
  */
 import { z } from 'zod';
 
@@ -119,19 +120,20 @@ function loadContext(key: string): ChatContext {
 }
 
 let contextKey = STORAGE_KEY;
-let context = loadContext(contextKey);
+let loaded: ChatContext | null = null;
+const context = (): ChatContext => (loaded ??= loadContext(contextKey));
 
 function updateContext(updates: Partial<ChatContext>): void {
-  context = { ...context, ...updates, timestamp: Date.now() };
-  writeLocal(contextKey, context);
+  loaded = { ...context(), ...updates, timestamp: Date.now() };
+  writeLocal(contextKey, loaded);
 }
 
 export function scopeStorageTo(config: Pick<ValidWidgetConfig, 'mtxId'>): void {
   contextKey = scopedKey(STORAGE_KEY, config);
-  context = loadContext(contextKey);
+  loaded = loadContext(contextKey);
 }
 
-export const getChatId = (): string | null => context.chat_id;
+export const getChatId = (): string | null => context().chat_id;
 
 export const setChatId = (chatId: string): void => updateContext({ chat_id: chatId });
 
@@ -172,7 +174,7 @@ export function claimToolCall(toolCallId: string): ToolCallClaim {
 }
 
 export function readChatSnapshot(): ChatSnapshot {
-  const { messages, currentMode, isOpen } = context;
+  const { messages, currentMode, isOpen } = context();
   return { messages, currentMode, isOpen };
 }
 
