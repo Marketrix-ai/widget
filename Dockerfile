@@ -5,7 +5,8 @@ ARG BUN_VERSION
 FROM oven/bun:${BUN_VERSION}-alpine AS base
 WORKDIR /app
 COPY package.json bun.lock ./
-RUN --mount=type=cache,target=/root/.bun/install/cache bun install --frozen-lockfile
+ARG BUN_NETWORK_CONCURRENCY=48
+RUN --mount=type=cache,target=/root/.bun/install/cache bun install --network-concurrency "$BUN_NETWORK_CONCURRENCY" --frozen-lockfile
 COPY . .
 
 FROM base AS builder
