@@ -16,7 +16,7 @@ concurrency:
 jobs:
   changes:
     if: ${{ !github.event.pull_request.draft }}
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-26.04-arm
     timeout-minutes: 5
     outputs:
       code: ${{ steps.diff.outputs.code }}
@@ -35,7 +35,7 @@ jobs:
   ci:
     needs: changes
     if: needs.changes.outputs.code == 'true'
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-26.04-arm
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
