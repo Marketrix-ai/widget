@@ -33,6 +33,8 @@ that tag (read the tag from infra's Helm values — this public repo cannot reac
   uses). A `.mjs` import is cached by path only — cache-busting works only on `.ts`/`.tsx`.
 - jsdom does no layout: `offsetParent` is null, `innerText`/`isContentEditable` are missing, and
   `document.currentScript` cannot be `spyOn`-stubbed (shadow it as an own property). Stub them directly.
+- jsdom's `document` is a named-property proxy, so `spyOn(document, …)` silently records nothing — spy on
+  `Document.prototype`.
 - Bun's `it.each` hangs on a bare `[]` entry — wrap a no-argument case as `[[]]`.
 - `embedSmoke.test.ts` is the only test that boots the **built** `dist/widget.mjs`; `ci` builds before
   testing, and a test never spawns a build (it blew `bun test`'s timeout).
