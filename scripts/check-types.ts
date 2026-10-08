@@ -1,13 +1,12 @@
 /**
- * The one strict-typing gate for every repo: no declaration may stand on a loose type. `checkTypes` builds each
- * tracked tsconfig's program (a strict default for TypeScript outside one), asks the type checker for the type of
- * every variable, parameter, property, binding and function return, and refuses `any`, `object`, `{}`, a
- * string index of `unknown`, an arbitrary-JSON union, and `unknown` itself except as an annotated parameter or a catch binding, the one honest
- * type of input still to be parsed. It also refuses an `any` value flowing into an initializer, return, property or an
- * argument not typed `unknown`, a generic overload over a non-generic implementation (a cast by signature), type
- * assertions other than `as const`, `@ts-` directives and loose zod builders; Python files go to `check_types.py`, run
- * on the interpreter a repo pins in `.python-version` (through `uv`, since newer syntax fails to parse on an older
- * one) or else the system `python3`, and Go files may not use `any` or `interface{}`.
+ * The one strict-typing gate for every repo: `checkTypes` builds each tracked tsconfig's program (a strict default for
+ * TypeScript outside one) and refuses a variable, parameter, property, binding or return typed `any`, `object`, `{}`, a
+ * string index of `unknown`, an arbitrary-JSON union, or `unknown` except as an annotated parameter or catch binding,
+ * the one honest type of input still to be parsed. It also refuses an `any` value flowing into an initializer, return,
+ * property or an argument not typed `unknown`, a generic overload over a non-generic implementation, type assertions
+ * other than `as const`, `@ts-` directives, loose zod builders and a `jest.fn` typed with `any`, bun-types' default.
+ * Python files go to `check_types.py`, on the interpreter a repo pins in `.python-version` (through `uv`, since newer
+ * syntax fails to parse on an older one) or else the system `python3`; Go files may not use `any` or `interface{}`.
  * Generated code is skipped exactly as `check-comments.ts` skips it, so a mirror is judged in the repo it comes from.
  */
 import { execFileSync } from 'node:child_process';
@@ -232,6 +231,17 @@ function checkTsSource(checker: ts.TypeChecker, source: ts.SourceFile, file: str
       add(node, `type assertion \`as ${node.type.getText(source)}\``);
     }
     if (ts.isTypeAssertionExpression(node)) add(node, `type assertion \`<${node.type.getText(source)}>\``);
+    if (ts.isCallExpression(node) && node.expression.getText(source) === 'jest.fn') {
+      const signatures = checker.getTypeAtLocation(node).getCallSignatures();
+      const anyType = (type: ts.Type): boolean => (type.flags & ts.TypeFlags.Any) !== 0;
+      const loose = signatures.some(
+        signature =>
+          anyType(signature.getReturnType()) ||
+          signature.getParameters().some(parameter => anyType(checker.getTypeOfSymbolAtLocation(parameter, node))),
+      );
+      if (loose || signatures.length === 0)
+        add(node, '`jest.fn` mock typed with `any`; type it from the real function');
+    }
     if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
       const target = node.expression.expression;
       const method = node.expression.name.text;
