@@ -153,7 +153,7 @@ describe('a restage identical to the one already staged', () => {
 describe('cleanup detaches every handler it registered', () => {
   it('removes the document click listener, the window reposition listeners and the visibility interval', async () => {
     const service = makeShowFixture('<button id="a"></button>');
-    const removeDocListener = vi.spyOn(document, 'removeEventListener');
+    const removeDocListener = vi.spyOn(Document.prototype, 'removeEventListener');
     const removeWinListener = vi.spyOn(window, 'removeEventListener');
     const clearIntervalSpy = vi.spyOn(globalThis, 'clearInterval');
 

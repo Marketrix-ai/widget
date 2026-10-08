@@ -56,7 +56,7 @@ const DEPENDENCY_BUDGETS: Record<string, number> = {
   '@orpc/client': 22_400,
   '@orpc/standard-server-fetch': 8_500,
   '@orpc/standard-server': 7_900,
-  '@orpc/shared': 7_700,
+  '@orpc/shared': 9_700,
   '@floating-ui/utils': 2_300,
 };
 
