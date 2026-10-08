@@ -90,7 +90,7 @@ export default defineConfig(({ command }) => {
         {
           name: 'typescript-declarations',
           closeBundle() {
-            execSync('tsc -p tsconfig.build.json', { stdio: 'inherit', cwd: cwd() });
+            execSync('node_modules/typescript-native/bin/tsc -p tsconfig.build.json', { stdio: 'inherit', cwd: cwd() });
           },
         },
       ],

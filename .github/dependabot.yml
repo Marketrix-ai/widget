@@ -1,5 +1,4 @@
 # Weekly npm, docker and github-actions updates, npm minor and patch bumps grouped into one pull request.
-# TypeScript majors are ignored until typescript-eslint supports them.
 version: 2
 updates:
   - package-ecosystem: 'npm'
@@ -9,9 +8,6 @@ updates:
     groups:
       minor-and-patch:
         update-types: ['minor', 'patch']
-    ignore:
-      - dependency-name: 'typescript'
-        update-types: ['version-update:semver-major']
     open-pull-requests-limit: 5
   - package-ecosystem: 'docker'
     directory: '/'

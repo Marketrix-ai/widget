@@ -31,7 +31,7 @@
     "check:comments": "bun scripts/check-comments.ts",
     "check:types": "bun scripts/check-types.ts",
     "code:fix": "eslint . --fix && prettier --write .",
-    "code:check": "tsc --noEmit && eslint . --max-warnings 0 && prettier --check ."
+    "code:check": "node_modules/typescript-native/bin/tsc --noEmit && eslint . --max-warnings 0 && prettier --check ."
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -72,7 +72,8 @@
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "terser": "^5.51.2",
-    "typescript": "^6.0.3",
+    "typescript": "npm:@typescript/typescript6@6.0.2",
+    "typescript-native": "npm:typescript@7.0.2",
     "vite": "^8.3.3"
   }
 }
