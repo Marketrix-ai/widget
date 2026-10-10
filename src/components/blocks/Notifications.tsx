@@ -1,8 +1,8 @@
 /**
  * The widget's one notification surface on Base UI Toast, which owns the live region, timers and stacking.
  * `NotificationList` renders toasts in the error or info tone, `NotificationProvider` portals the viewport
- * into the widget's shadow root on the launcher's bottom baseline (lifted above a bottom launcher only on narrow
- * screens, where the centred toast would cover it), and `WidgetNotifications` mirrors the `error` and
+ * into the widget's shadow root on the launcher's bottom baseline (on narrow screens it spans the row beside a bottom
+ * launcher instead of centring over it), and `WidgetNotifications` mirrors the `error` and
  * `greeting` props into toasts under a stable id, so a re-render upserts rather than duplicating.
  */
 import { Toast } from '@base-ui/react/toast';
@@ -108,14 +108,10 @@ const NotificationList: React.FC = () => {
 interface NotificationProviderProps {
   children?: React.ReactNode;
   container?: HTMLElement | null;
-  launcherBelow?: boolean;
+  launcherSide?: 'left' | 'right' | undefined;
 }
 
-export const NotificationProvider: React.FC<NotificationProviderProps> = ({
-  children,
-  container,
-  launcherBelow = false,
-}) => (
+export const NotificationProvider: React.FC<NotificationProviderProps> = ({ children, container, launcherSide }) => (
   <Toast.Provider>
     {children}
     <Toast.Portal container={container ?? undefined}>
@@ -125,7 +121,8 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
           zIndex: LAYER_TOKENS.toast,
           ...{
             '--mtx-toast-edge': `${EDGE_OFFSET_PX}px`,
-            '--mtx-toast-lift': `${launcherBelow ? EDGE_OFFSET_PX + LAUNCHER_SIZE_PX : 0}px`,
+            '--mtx-toast-left': `${EDGE_OFFSET_PX + (launcherSide === 'left' ? LAUNCHER_SIZE_PX + 8 : 0)}px`,
+            '--mtx-toast-right': `${EDGE_OFFSET_PX + (launcherSide === 'right' ? LAUNCHER_SIZE_PX + 8 : 0)}px`,
           },
         }}
       >

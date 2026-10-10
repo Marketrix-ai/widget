@@ -327,7 +327,8 @@
 
 .mtx-toast-viewport {
   --mtx-toast-edge: 20px;
-  --mtx-toast-lift: 0px;
+  --mtx-toast-left: 20px;
+  --mtx-toast-right: 20px;
   position: fixed;
   bottom: var(--mtx-toast-edge);
   left: 50%;
@@ -340,7 +341,12 @@
 
 @media (max-width: 600px) {
   .mtx-toast-viewport {
-    bottom: calc(var(--mtx-toast-edge) + var(--mtx-toast-lift));
+    left: var(--mtx-toast-left);
+    right: var(--mtx-toast-right);
+    transform: none;
+    max-width: none;
+    min-height: 56px;
+    justify-content: center;
   }
 }
 
