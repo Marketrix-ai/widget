@@ -105,6 +105,7 @@ export const WidgetRoot: React.FC = () => {
   if (hidden) return null;
 
   const showProcessingFeedback = state.isAwaitingReply || state.isTaskRunning;
+  const corner = getCorner(widgetPosition);
 
   return (
     <WidgetConfigContext value={effectiveConfig}>
@@ -117,7 +118,7 @@ export const WidgetRoot: React.FC = () => {
         <PortalContainerContext value={portalContainer}>
           <NotificationProvider
             container={portalContainer}
-            launcherBelow={getCorner(widgetPosition).vertical === 'bottom'}
+            launcherSide={corner.vertical === 'bottom' ? corner.horizontal : undefined}
           >
             {showProcessingFeedback && (
               <Surface
