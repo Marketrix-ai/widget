@@ -215,8 +215,8 @@ function showHostPageNotice(message: string, tone: NotificationTone, styleNonce:
         <WidgetNotifications
           error={tone === 'error' ? message : undefined}
           onClearError={hideHostPageNotice}
-          greeting={tone === 'error' ? undefined : message}
-          onGreetingDismiss={hideHostPageNotice}
+          notice={tone === 'error' ? undefined : message}
+          onNoticeDismiss={hideHostPageNotice}
         />
       </NotificationProvider>
     </React.StrictMode>,

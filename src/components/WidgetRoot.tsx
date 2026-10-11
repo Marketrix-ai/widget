@@ -55,7 +55,6 @@ function useScrollLock(enabled: boolean): void {
 
 export const WidgetRoot: React.FC = () => {
   const config = useWidgetConfig();
-  const [showGreeting, setShowGreeting] = useState(false);
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
   const { state, actions } = useWidget();
   const contained = config.placement === 'contained';
@@ -72,15 +71,6 @@ export const WidgetRoot: React.FC = () => {
       config.widget_position,
   );
 
-  useEffect(() => {
-    if (state.isOpen || contained || !config.widget_greeting_toast) {
-      setShowGreeting(false);
-      return;
-    }
-    const timer = setTimeout(() => setShowGreeting(true), 2000);
-    return () => clearTimeout(timer);
-  }, [state.isOpen, contained, config.widget_greeting_toast]);
-
   const effectiveConfig = useMemo(
     () => ({
       ...config,
@@ -95,7 +85,6 @@ export const WidgetRoot: React.FC = () => {
     setError(undefined);
     streamClient.reconnectNow();
   }, [setError]);
-  const dismissGreeting = useCallback(() => setShowGreeting(false), []);
 
   const handlePositionChange = (position: WidgetPosition) => {
     setWidgetPosition(position);
@@ -143,9 +132,6 @@ export const WidgetRoot: React.FC = () => {
               error={state.error}
               onClearError={clearError}
               onRetry={state.canRetry ? retry : undefined}
-              greeting={showGreeting && !state.error ? config.widget_greeting : undefined}
-              greetingBody={config.widget_body}
-              onGreetingDismiss={dismissGreeting}
             />
           </NotificationProvider>
         </PortalContainerContext>

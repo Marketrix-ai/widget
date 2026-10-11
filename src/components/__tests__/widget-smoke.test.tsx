@@ -1,7 +1,7 @@
 /**
  * Widget smoke: it mounts with the launcher, uses semantic and layer tokens, portals the modal inside
  * the token-bearing widget root, paints it above the panel, keeps a hidden widget visible in preview mode,
- * times the greeting out even while the root keeps re-rendering, and locks mobile page scroll only for a
+ * waves at the launcher once it settles even while the root keeps re-rendering, and locks mobile page scroll only for a
  * visible open panel.
  */
 import { act, fireEvent, screen } from '@testing-library/react';
@@ -56,27 +56,27 @@ describe('Widget smoke', () => {
     expect(screen.getByRole('button', { name: /open/i })).toBeInTheDocument();
   });
 
-  it('times the greeting out even while the root keeps re-rendering', async () => {
-    vi.spyOn(chatThread, 'getOrCreateChatId').mockResolvedValue('chat-greeting');
+  it.each([
+    [true, 1],
+    [false, 0],
+  ] as const)('with the greeting on %p, the launcher waves %p times even while re-rendering', async (on, count) => {
+    vi.spyOn(chatThread, 'getOrCreateChatId').mockResolvedValue('chat-wave');
     vi.spyOn(streamClient, 'connect').mockResolvedValue();
     vi.useFakeTimers();
-    const mount = mockMount(false, { widget_greeting: 'Hello there' });
+    const mount = mockMount(false, { widget_greeting_toast: on });
     const tree = () => (
       <WidgetProviders {...mount}>
         <WidgetRoot />
       </WidgetProviders>
     );
-    const { rerender } = renderWidget({ widget_greeting: 'Hello there' }, { previewMode: false });
-    rerender(tree());
-    await act(async () => vi.advanceTimersByTime(2000));
-    expect(screen.queryAllByText('Hello there')).not.toHaveLength(0);
-
-    for (let i = 0; i < 9; i++) {
+    const { rerender } = renderWidget({ widget_greeting_toast: on }, { previewMode: false });
+    for (let i = 0; i < 4; i++) {
       rerender(tree());
-      await act(async () => vi.advanceTimersByTime(1000));
+      await act(async () => vi.advanceTimersByTime(500));
     }
 
-    expect(screen.queryAllByText('Hello there')).toHaveLength(0);
+    expect(screen.queryAllByTestId('launcher-wave')).toHaveLength(count);
+    expect(screen.queryAllByText('Hey There!')).toHaveLength(0);
     vi.useRealTimers();
     vi.restoreAllMocks();
   });

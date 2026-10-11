@@ -99,7 +99,7 @@ each a Zod union discriminated on `type`.
   An agent message's `status` (one enum: pending, question, or how its task ended) and a progress part's
   `status` are UI-only — never conflate or widen them.
 - `widget_recording` (off by default) gates rrweb batching. `widget_appearance: 'hidden'` hides host-page
-  UI but still initializes; `widget_greeting_toast` controls only the toast.
+  UI but still initializes; `widget_greeting_toast` controls only the launcher's wave.
 - **`widgetPublicSearch` never returns a credential**, embed snippet or `status` — a returned row is live.
 
 ## Init & isolation
