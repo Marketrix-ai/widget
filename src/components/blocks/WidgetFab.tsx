@@ -1,6 +1,7 @@
 /**
  * `WidgetFab` — the launcher button: draggable to a corner (`useDragSnap`, off in preview mode), glowing
- * while a reply or task is in flight, and showing a stop control while a task runs and the panel is closed.
+ * while a reply or task is in flight, showing a stop control while a task runs and the panel is closed, and
+ * waving a hand beside the icon shortly after it appears closed when `widget_greeting_toast` is on.
  */
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
@@ -27,6 +28,7 @@ import { Surface } from '../base/Surface';
 const DRAG_THRESHOLD_PX = 5;
 const VELOCITY_SAMPLE_INTERVAL_MS = 10;
 const VELOCITY_HISTORY_SIZE = 6;
+const WAVE_DELAY_MS = 1500;
 
 function useDragSnap(onPositionCommit: (position: WidgetPosition) => void) {
   const { placement, widget_position: position } = useWidgetConfig();
@@ -225,6 +227,7 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onPositionCommit }) => {
     widget_background_color: backgroundColor,
     widget_position: position,
     widget_position_z_index: zIndex,
+    widget_greeting_toast: waveEnabled,
   } = useWidgetConfig();
   const { state, actions } = useWidget();
   const open = state.isOpen;
@@ -234,6 +237,14 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onPositionCommit }) => {
   const showProcessingGlow = !open && (state.isAwaitingReply || taskRunning);
   const showStopControl = !open && taskRunning;
   const tone = error ? 'error' : 'processing';
+  const [waving, setWaving] = useState(false);
+
+  useEffect(() => {
+    setWaving(false);
+    if (!waveEnabled || open) return;
+    const timer = setTimeout(() => setWaving(true), WAVE_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [waveEnabled, open]);
 
   const { wrapperRef, isDragging, pixelPositionStyle, suppressUntilRef, handlers } = useDragSnap(onPositionCommit);
 
@@ -251,6 +262,19 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onPositionCommit }) => {
     >
       <Surface className='mtx-fab' data-open={open ? 'true' : 'false'}>
         {showProcessingGlow && <Surface className='mtx-fab-glow' data-tone={tone} aria-hidden />}
+
+        {waving && !isDragging && (
+          <Surface
+            as='span'
+            className='mtx-fab-wave'
+            data-side={getCorner(position).horizontal}
+            data-testid='launcher-wave'
+            aria-hidden
+            onAnimationEnd={() => setWaving(false)}
+          >
+            👋
+          </Surface>
+        )}
 
         {showStopControl && !isDragging && (
           <Button

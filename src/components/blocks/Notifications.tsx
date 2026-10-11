@@ -3,7 +3,7 @@
  * `NotificationList` renders toasts in the error or info tone, `NotificationProvider` portals the viewport
  * into the widget's shadow root on the launcher's bottom baseline (on narrow screens it spans the row beside a bottom
  * launcher instead of centring over it), and `WidgetNotifications` mirrors the `error` and
- * `greeting` props into toasts under a stable id, so a re-render upserts rather than duplicating.
+ * host-page `notice` props into toasts under a stable id, so a re-render upserts rather than duplicating.
  */
 import { Toast } from '@base-ui/react/toast';
 import React, { useEffect } from 'react';
@@ -18,7 +18,7 @@ import { Icon } from '../base/Icon';
 import { IconButton } from '../base/IconButton';
 import { Text } from '../base/Text';
 
-const GREETING_TIMEOUT_MS = 8000;
+const NOTICE_TIMEOUT_MS = 8000;
 
 const NotificationList: React.FC = () => {
   const { toasts } = Toast.useToastManager();
@@ -60,19 +60,6 @@ const NotificationList: React.FC = () => {
               />
             }
           />
-          {toast.description != null && (
-            <Toast.Description
-              render={
-                <Text
-                  as='span'
-                  block
-                  tone='inherit'
-                  truncate
-                  style={{ fontSize: '12px', color: colors.bodyColor, opacity: 0.8 }}
-                />
-              }
-            />
-          )}
         </Stack>
 
         {toast.actionProps && (
@@ -136,18 +123,16 @@ interface WidgetNotificationsProps {
   error?: string | undefined;
   onClearError: () => void;
   onRetry?: (() => void) | undefined;
-  greeting?: string | undefined;
-  greetingBody?: string;
-  onGreetingDismiss: () => void;
+  notice?: string | undefined;
+  onNoticeDismiss?: () => void;
 }
 
 export const WidgetNotifications: React.FC<WidgetNotificationsProps> = ({
   error,
   onClearError,
   onRetry,
-  greeting,
-  greetingBody,
-  onGreetingDismiss,
+  notice,
+  onNoticeDismiss,
 }) => {
   const { add, close } = Toast.useToastManager();
 
@@ -168,19 +153,18 @@ export const WidgetNotifications: React.FC<WidgetNotificationsProps> = ({
   }, [error, onRetry, add, close, onClearError]);
 
   useEffect(() => {
-    if (!greeting) {
-      close('greeting');
+    if (!notice) {
+      close('notice');
       return;
     }
     add({
-      id: 'greeting',
+      id: 'notice',
       type: 'info',
-      title: greeting,
-      description: greetingBody,
-      timeout: GREETING_TIMEOUT_MS,
-      onClose: onGreetingDismiss,
+      title: notice,
+      timeout: NOTICE_TIMEOUT_MS,
+      ...(onNoticeDismiss && { onClose: onNoticeDismiss }),
     });
-  }, [greeting, greetingBody, add, close, onGreetingDismiss]);
+  }, [notice, add, close, onNoticeDismiss]);
 
   return null;
 };

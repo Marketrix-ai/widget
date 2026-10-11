@@ -1,7 +1,7 @@
 /**
- * Tests for `WidgetNotifications`, which mirrors error and greeting props into Base UI toasts: an
+ * Tests for `WidgetNotifications`, which mirrors error and notice props into Base UI toasts: an
  * error is announced and dismissible, Retry appears only when offered, the toast survives a re-render,
- * and a greeting renders with its body.
+ * and a host-page notice renders.
  */
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
@@ -16,7 +16,7 @@ describe('WidgetNotifications', () => {
 
     render(
       <NotificationProvider>
-        <WidgetNotifications error='Something failed' onClearError={onClearError} onGreetingDismiss={noop} />
+        <WidgetNotifications error='Something failed' onClearError={onClearError} />
       </NotificationProvider>,
     );
 
@@ -32,7 +32,7 @@ describe('WidgetNotifications', () => {
 
     const { rerender } = render(
       <NotificationProvider>
-        <WidgetNotifications error='Disconnected' onClearError={noop} onGreetingDismiss={noop} />
+        <WidgetNotifications error='Disconnected' onClearError={noop} />
       </NotificationProvider>,
     );
 
@@ -41,7 +41,7 @@ describe('WidgetNotifications', () => {
 
     rerender(
       <NotificationProvider>
-        <WidgetNotifications error='Disconnected' onClearError={noop} onRetry={onRetry} onGreetingDismiss={noop} />
+        <WidgetNotifications error='Disconnected' onClearError={noop} onRetry={onRetry} />
       </NotificationProvider>,
     );
 
@@ -53,7 +53,7 @@ describe('WidgetNotifications', () => {
   it('keeps the error toast up across a re-render that passes new callback references', async () => {
     const { rerender } = render(
       <NotificationProvider>
-        <WidgetNotifications error='Disconnected' onClearError={() => {}} onGreetingDismiss={noop} />
+        <WidgetNotifications error='Disconnected' onClearError={() => {}} />
       </NotificationProvider>,
     );
 
@@ -61,26 +61,20 @@ describe('WidgetNotifications', () => {
 
     rerender(
       <NotificationProvider>
-        <WidgetNotifications error='Disconnected' onClearError={() => {}} onGreetingDismiss={noop} />
+        <WidgetNotifications error='Disconnected' onClearError={() => {}} />
       </NotificationProvider>,
     );
 
     expect(await screen.findAllByText('Disconnected')).not.toHaveLength(0);
   });
 
-  it('shows the greeting with its body', async () => {
+  it('shows a host-page notice', async () => {
     render(
       <NotificationProvider>
-        <WidgetNotifications
-          onClearError={noop}
-          greeting='Hello there'
-          greetingBody='How can I help?'
-          onGreetingDismiss={noop}
-        />
+        <WidgetNotifications onClearError={noop} notice='Widget unavailable' />
       </NotificationProvider>,
     );
 
-    expect((await screen.findAllByText('Hello there')).length).toBeGreaterThan(0);
-    expect(screen.getAllByText('How can I help?').length).toBeGreaterThan(0);
+    expect((await screen.findAllByText('Widget unavailable')).length).toBeGreaterThan(0);
   });
 });

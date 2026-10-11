@@ -89,6 +89,10 @@
     --duration-animation: 0ms !important;
     --duration-fade: 0ms !important;
   }
+
+  .mtx-fab-wave {
+    display: none;
+  }
 }
 
 .mtx-button,
@@ -509,6 +513,59 @@
   opacity: 0;
   pointer-events: none;
   transition: opacity 150ms ease-in-out;
+}
+
+.mtx-fab-wave {
+  position: absolute;
+  top: -14px;
+  z-index: 30;
+  font-size: 24px;
+  line-height: 1;
+  pointer-events: none;
+  transform-origin: 70% 80%;
+  animation: mtx-wave 2.4s ease-in-out forwards;
+}
+
+.mtx-fab-wave[data-side='right'] {
+  left: -10px;
+}
+
+.mtx-fab-wave[data-side='left'] {
+  right: -10px;
+}
+
+@keyframes mtx-wave {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.4) rotate(0deg);
+  }
+  12% {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+  22% {
+    transform: rotate(16deg);
+  }
+  32% {
+    transform: rotate(-8deg);
+  }
+  42% {
+    transform: rotate(16deg);
+  }
+  52% {
+    transform: rotate(-4deg);
+  }
+  62% {
+    transform: rotate(12deg);
+  }
+  72% {
+    opacity: 1;
+    transform: rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.8) rotate(0deg);
+  }
 }
 
 .mtx-fab-stop[data-side='left'] {
